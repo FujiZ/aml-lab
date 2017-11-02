@@ -12,6 +12,8 @@ import functools
 # (global) variable definition here
 TRAINING_TIME_LIMIT = 60 * 10
 A = None  # global matrix for training
+STEP = 0.01
+TIME = 100
 
 
 # class definition here
@@ -49,19 +51,37 @@ def timeout(timeout):
 
 @timeout(TRAINING_TIME_LIMIT)
 def train(traindata):
-    # 在此处完成你的训练函数，注意训练时间不要超过TRAINING_TIME_LIMIT(秒)。
-    # np.dot(mata, matb)
-    # np.exp()
-    # narray.sum()
-    # matb.T return (matb)T
-    # np.identity(n) init
-    # A = np.identity(traindata[0])
-    dataset = traindata[0]
-    labelset = traindata[1]
+    def squared_norm(mat, axis=0):
+        return np.sum(mat ** 2, axis)
+
+    x = traindata[0].T  # shape in (dim, sample)
+    label = traindata[1]
+    dim, num = x.shape
     global A
-    dim = dataset.shape[1]  # dim of each entry
-    A = np.identity(dim, dtype=np.float64)  # TODO change dtype to float32?
-    print(traindata[1])
+    A = np.identity(dim, dtype=np.float)  # TODO change dtype to float32?
+    mask = (label == label[:, np.newaxis])
+    # TODO iter the code below
+    for i in range(TIME):
+        ax = np.dot(A, x)  # ax = A·(x1, ..., xn)
+        # exp_dist = exp(-||Ax_i-Ax_j||^2)
+        exp_dist_ij = np.exp(-squared_norm(ax[:, :, np.newaxis] - ax[:, np.newaxis, :], axis=0))
+        p_ij = exp_dist_ij / np.sum(exp_dist_ij, axis=0)
+        p_i = np.sum(p_ij * mask, axis=0)
+        fa = np.sum(p_i)
+        x_ij = np.stack(x[:, :, np.newaxis] - x[:, np.newaxis, :], axis=2)  # x_ij in n*n*d form
+        # n*n*d*d tensor for x_ij*x_ij^T
+        x_xt = np.matmul(x_ij[..., np.newaxis], x_ij[..., np.newaxis, :])
+        p_x_xt = (p_ij[:, :, np.newaxis, np.newaxis] * x_xt)  # p_ik*x_ik*x_ik^T
+        # p_i*sum(p_ik*x_ik*x_ik^T)
+        p_sum_p_x_xt = p_i[:, np.newaxis, np.newaxis] * p_x_xt.sum(axis=1)
+        # sum(p_ij*x_ij*x_ij^T) (j∈C_i)
+        sum_p_x_xt = (mask[:, :, np.newaxis, np.newaxis] * p_x_xt).sum(axis=1)
+        # TODO calc df_da
+        df_da = 2 * A * (p_sum_p_x_xt - sum_p_x_xt).sum(axis=0)
+        A += STEP * df_da
+        # (p_ij[:, :, np.newaxis, np.newaxis] * x_ij).sum(axis=1)
+        # print((p_ij * x_ij).shape)
+    print(A)
     return 0
 
 
@@ -70,8 +90,9 @@ def Euclidean_distance(inst_a, inst_b):
 
 
 def distance(inst_a, inst_b):
-    dist = np.random.rand()  # 随机度量 这是一个错误示范，请删除这行 _(:3 」∠)_
-    return dist
+    diff_ab = np.dot(A, inst_a[:, np.newaxis] - inst_b[:, np.newaxis])
+    np.sqrt(np.dot(diff_ab.T, diff_ab))
+    return
 
 
 # main program here
