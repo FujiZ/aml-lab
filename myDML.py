@@ -8,12 +8,14 @@ Created on Sun Oct 22 24:00:00 2017
 import numpy as np
 from threading import Thread
 import functools
+import time
 
 # (global) variable definition here
 TRAINING_TIME_LIMIT = 60 * 10
 A = None  # global matrix for training
 STEP = 0.01
-TIME = 100
+TIME = 2000
+BATCH = 200
 
 
 # class definition here
@@ -59,18 +61,19 @@ def train(traindata):
     dim, num = x.shape
     global A
     A = np.identity(dim, dtype=np.float)  # TODO change dtype to float32?
-    mask = (label == label[:, np.newaxis])
+    mask = (label[:, np.newaxis] == label)
+    # x_i - x_j in n*n*d matrix
+    x_ij = np.stack(x[:, :, np.newaxis] - x[:, np.newaxis, :], axis=2)
+    # n*n*d*d tensor for x_ij*x_ij^T
+    x_xt = np.matmul(x_ij[..., np.newaxis], x_ij[..., np.newaxis, :])
     # TODO iter the code below
     for i in range(TIME):
-        ax = np.dot(A, x)  # ax = A·(x1, ..., xn)
+        a_x = np.dot(A, x)  # a_x = A·(x1, ..., xn)
         # exp_dist = exp(-||Ax_i-Ax_j||^2)
-        exp_dist_ij = np.exp(-squared_norm(ax[:, :, np.newaxis] - ax[:, np.newaxis, :], axis=0))
+        exp_dist_ij = np.exp(-squared_norm(a_x[:, :, np.newaxis] - a_x[:, np.newaxis, :], axis=0))
         p_ij = exp_dist_ij / np.sum(exp_dist_ij, axis=0)
         p_i = np.sum(p_ij * mask, axis=0)
-        fa = np.sum(p_i)
-        x_ij = np.stack(x[:, :, np.newaxis] - x[:, np.newaxis, :], axis=2)  # x_ij in n*n*d form
-        # n*n*d*d tensor for x_ij*x_ij^T
-        x_xt = np.matmul(x_ij[..., np.newaxis], x_ij[..., np.newaxis, :])
+        # fa = np.sum(p_i)
         p_x_xt = (p_ij[:, :, np.newaxis, np.newaxis] * x_xt)  # p_ik*x_ik*x_ik^T
         # p_i*sum(p_ik*x_ik*x_ik^T)
         p_sum_p_x_xt = p_i[:, np.newaxis, np.newaxis] * p_x_xt.sum(axis=1)
@@ -79,9 +82,8 @@ def train(traindata):
         # TODO calc df_da
         df_da = 2 * A * (p_sum_p_x_xt - sum_p_x_xt).sum(axis=0)
         A += STEP * df_da
-        # (p_ij[:, :, np.newaxis, np.newaxis] * x_ij).sum(axis=1)
-        # print((p_ij * x_ij).shape)
-    print(A)
+        print(A)
+        print(time.ctime())
     return 0
 
 
@@ -91,8 +93,7 @@ def Euclidean_distance(inst_a, inst_b):
 
 def distance(inst_a, inst_b):
     diff_ab = np.dot(A, inst_a[:, np.newaxis] - inst_b[:, np.newaxis])
-    np.sqrt(np.dot(diff_ab.T, diff_ab))
-    return
+    return np.sqrt(np.dot(diff_ab.T, diff_ab))
 
 
 # main program here
