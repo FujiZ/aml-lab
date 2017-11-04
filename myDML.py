@@ -13,9 +13,9 @@ import time
 # (global) variable definition here
 TRAINING_TIME_LIMIT = 60 * 10
 A = None  # global matrix for training
-LEARNING_RATE = 0.001
-EPOCH = 10000
-BATCH = 100
+LEARNING_RATE = 0.005
+EPOCH = 200
+BATCH = 500
 
 
 # class definition here
@@ -68,13 +68,10 @@ def train(traindata):
         y = label[idx]
         mask = (y[:, np.newaxis] == y)
         a_x = np.dot(A, x)  # a_x = A·(x1, ..., xn)
-        # exp_dist = exp(-||Ax_i-Ax_j||^2)
+        # exp_dist = exp(-||Ax_i-Ax_j||^2)  n*n matrix
         exp_dist_ij = np.exp(-squared_norm(a_x[:, :, np.newaxis] - a_x[:, np.newaxis, :], axis=0))
         np.fill_diagonal(exp_dist_ij, 0)  # set exp_dist_ii to 0
-        # p_ij = 1 / ()
-        # TODO change p_ij calculation to avoid underflow
-        p_ij = exp_dist_ij / np.sum(exp_dist_ij, axis=0)
-        # TODO code review (code above this line has been checked)
+        p_ij = exp_dist_ij / np.sum(exp_dist_ij, axis=0)[:, np.newaxis]
         p_i = np.sum(p_ij * mask, axis=1)  # ATTENTION: axis=1 because p_ij isn't symmetrical!
         # x_i - x_j in n*n*d matrix
         x_ij = np.stack(x[:, :, np.newaxis] - x[:, np.newaxis, :], axis=2)
@@ -97,8 +94,9 @@ def Euclidean_distance(inst_a, inst_b):
 
 
 def distance(inst_a, inst_b):
-    diff_ab = (inst_a - inst_b)[np.newaxis, :]
-    return np.sqrt(np.dot(diff_ab, np.dot(A, diff_ab.T)))
+    diff_xy = (inst_a - inst_b)[:, np.newaxis]
+    a_xy = np.dot(A, diff_xy)
+    return np.sqrt(np.dot(a_xy.T, a_xy))
 
 
 # main program here
