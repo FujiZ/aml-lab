@@ -14,7 +14,7 @@ import time
 TRAINING_TIME_LIMIT = 60 * 10
 A = None  # global matrix for training
 LEARNING_RATE = 0.005
-EPOCH = 200
+EPOCH = 750
 BATCH = 500
 
 
@@ -59,11 +59,14 @@ def train(traindata):
     data = traindata[0]  # shape in (num, dim)
     label = traindata[1]
     num, dim = data.shape
-    global A
+    global A, BATCH
     A = np.identity(dim, dtype=np.float)
+    batch = min((BATCH, num))
+    print('batch:', batch, 'epoch:', EPOCH, 'learning rate:', LEARNING_RATE)
+    print('start time:', time.ctime())
     for i in range(EPOCH):
         # select BATCH sample randomly from traindata
-        idx = np.random.choice(num, BATCH, replace=False)
+        idx = np.random.choice(num, batch, replace=False)
         x = data[idx, :].T
         y = label[idx]
         mask = (y[:, np.newaxis] == y)
@@ -71,7 +74,9 @@ def train(traindata):
         # exp_dist = exp(-||Ax_i-Ax_j||^2)  n*n matrix
         exp_dist_ij = np.exp(-squared_norm(a_x[:, :, np.newaxis] - a_x[:, np.newaxis, :], axis=0))
         np.fill_diagonal(exp_dist_ij, 0)  # set exp_dist_ii to 0
-        p_ij = exp_dist_ij / np.sum(exp_dist_ij, axis=0)[:, np.newaxis]
+        sum_exp_dist_ij = np.sum(exp_dist_ij, axis=0)[:, np.newaxis]
+        sum_exp_dist_ij[sum_exp_dist_ij == 0.0] = 1
+        p_ij = exp_dist_ij / sum_exp_dist_ij
         p_i = np.sum(p_ij * mask, axis=1)  # ATTENTION: axis=1 because p_ij isn't symmetrical!
         # x_i - x_j in n*n*d matrix
         x_ij = np.stack(x[:, :, np.newaxis] - x[:, np.newaxis, :], axis=2)
@@ -85,7 +90,7 @@ def train(traindata):
         sum_p_x_xt = (mask[:, :, np.newaxis, np.newaxis] * p_x_xt).sum(axis=1)
         df_da = 2 * np.dot(A, (p_sum_p_x_xt - sum_p_x_xt).sum(axis=0))
         A += LEARNING_RATE * df_da
-    print(time.ctime())
+    print('stop time:', time.ctime())
     return 0
 
 

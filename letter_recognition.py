@@ -12,7 +12,7 @@ import collections
 import sys
 
 # (global) variable definition here
-REPEAT = 30
+REPEAT = 1
 
 # class definition here
 
