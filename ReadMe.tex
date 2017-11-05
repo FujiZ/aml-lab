@@ -24,15 +24,56 @@
 \maketitle
 
 \section*{综述}
-	\dots
 
 \section*{任务1}
-	\subsection*{度量函数学习目标}
-		\dots
-	\subsection*{优化算法}
-		\dots
-		
-\section*{任务2}
-	\dots
 
+\subsection*{度量函数学习目标}
+
+根据马氏距离的定义
+\[
+	dist_{mah}^2(x, y) = (x - y)^\top Q(x - y) = (Ax - Ay)^\top (Ax - Ay)
+\]
+其中$Q$称为“度量矩阵”，而度量学习则是对$Q$的学习。
+为了保持距离非负且对称，$Q$必须是（半）正定对称矩阵，即必有正交基$A$使得$Q$能写为$Q = AA^\top$。
+
+为了提高近邻分类器的性能，我们将$Q$直接嵌入到近邻分类器的评价指标中去，
+通过优化该性能目标相应地求得$Q$。
+在本实验中我们采用近邻成分分析(Neighbourhood Component Analusis)进行学习。
+
+近邻分类器在进行判别时通常使用多数投票法，领域中的每个样本投1票，
+领域外的样本投0票。NCA将其替换为概率投票法，对于任意样本$x_{j}$，它对$x_{i}$分类结果影响的概率为
+\[
+	p_{ij} = \frac{\exp(\lVert Ax_{i} - Ax_{j} \rVert^2)}
+	{\sum_{k \neq i} \exp(\lVert Ax_{i} - Ax_{k} \rVert^2)}, \qquad
+	p_{ii} = 0
+\]
+若以留一法正确率的最大化为目标，则可计算$x_{i}$的留一法正确率，
+即它被自身之外的所有样本正确分类的概率为
+\[
+	p_{i} = \sum_{j \in C_{i}} p_{ij}
+\]
+其中$C_{i} = \lbrace j \vert c_{i} = c_{j} \rbrace$，
+即与$x_{i}$属于相同类别的样本的下标集合。
+于是，整个样本集上的留一法正确率为
+\[
+	f(A) = \sum_{i} \sum_{j \in C_{i}} p_{ij} = \sum_{i} p_{i}
+\]
+
+NCA的优化目标是使得$f(A)$最大化，即
+\[
+	\max_{A} \sum_{i} \sum_{j \in C_{i}} p_{ij}
+\]
+通过求$f$对$A$的偏导，可以得到梯度公式（令$x_{ij} = x_{i} - x_{j}$）
+\[
+	\frac{\partial f}{\partial A} =
+	-2A \sum_{i} \sum_{j \in C_{i}} p_{ij}( x_{ij} x_{ij}^\top - \sum_{k} p_{ik} x_{ik} x_{ik}^\top)
+\]
+根据该公式，使用梯度下降法即可求解NCA的目标函数，
+得到最大化近邻分类器留一法正确率的距离度量矩阵$Q$。
+
+\subsection*{优化算法}
+
+
+
+\section*{任务2}
 \end{document}
