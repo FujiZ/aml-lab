@@ -86,7 +86,7 @@ def train(traindata):
         p_x_xt = (p_ij[:, :, np.newaxis, np.newaxis] * x_xt)  # p_ik*x_ik*x_ik^T
         # p_i*sum(p_ik*x_ik*x_ik^T)
         p_sum_p_x_xt = p_i[:, np.newaxis, np.newaxis] * p_x_xt.sum(axis=1)
-        # sum(p_ij*x_ij*x_ij^T) (j∈C_i)
+        # sum(p_ij*x_ij*x_ij^T) (j in C_i)
         sum_p_x_xt = (mask[:, :, np.newaxis, np.newaxis] * p_x_xt).sum(axis=1)
         df_da = 2 * np.dot(A, (p_sum_p_x_xt - sum_p_x_xt).sum(axis=0))
         A += LEARNING_RATE * df_da

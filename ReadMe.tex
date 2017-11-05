@@ -13,6 +13,9 @@
 \usepackage{multirow}
 \usepackage{url}
 \usepackage{enumerate}
+\usepackage{tabularx}
+\usepackage[colorlinks, linkcolor=green]{hyperref}
+\bibliographystyle{plain}
 \renewcommand\refname{参考文献}
 
 %--
@@ -25,6 +28,15 @@
 
 \section*{综述}
 
+在机器学习领域中，如何选择合适的距离度量准则一直都是一个重要而困难的问题。
+因为度量函数的选择非常依赖于学习任务本身，并且度量函数的好坏会直接影响到学习算法的性能。
+为了解决这一问题，我们可以尝试通过学习得到合适的度量函数。
+距离度量学习(Distance Metric Learning)的目标是学习得到合适的度量函数，
+使得在该度量下更容易找出样本之间潜在的联系，进而提高那些基于相似度的学习器的性能。
+
+在本实验中,我们采用近邻成分分析(Neighbourhood Component Analusis)来实现距离度量学习，
+并使用Python实现算法并测试了其性能。
+
 \section*{任务1}
 
 \subsection*{度量函数学习目标}
@@ -34,11 +46,11 @@
 	dist_{mah}^2(x, y) = (x - y)^\top Q(x - y) = (Ax - Ay)^\top (Ax - Ay)
 \]
 其中$Q$称为“度量矩阵”，而度量学习则是对$Q$的学习。
-为了保持距离非负且对称，$Q$必须是（半）正定对称矩阵，即必有正交基$A$使得$Q$能写为$Q = AA^\top$。
+为了保持距离非负且对称，$Q$必须是(半)正定对称矩阵，即必有正交基$A$使得$Q$能写为$Q = AA^\top$。
 
 为了提高近邻分类器的性能，我们将$Q$直接嵌入到近邻分类器的评价指标中去，
 通过优化该性能目标相应地求得$Q$。
-在本实验中我们采用近邻成分分析(Neighbourhood Component Analusis)进行学习。
+在本实验中我们采用近邻成分分析进行学习。
 
 近邻分类器在进行判别时通常使用多数投票法，领域中的每个样本投1票，
 领域外的样本投0票。NCA将其替换为概率投票法，对于任意样本$x_{j}$，它对$x_{i}$分类结果影响的概率为
@@ -54,26 +66,67 @@
 \]
 其中$C_{i} = \lbrace j \vert c_{i} = c_{j} \rbrace$，
 即与$x_{i}$属于相同类别的样本的下标集合。
-于是，整个样本集上的留一法正确率为
+于是，整个样本集上被正确分类的点的个数的期望为
 \[
 	f(A) = \sum_{i} \sum_{j \in C_{i}} p_{ij} = \sum_{i} p_{i}
 \]
 
 NCA的优化目标是使得$f(A)$最大化，即
 \[
-	\max_{A} \sum_{i} \sum_{j \in C_{i}} p_{ij}
+	\max_{A} \sum_{i} \sum_{j \in C_{i}}
+	\frac{\exp(\lVert Ax_{i} - Ax_{j} \rVert^2)}
+	{\sum_{k \neq i} \exp(\lVert Ax_{i} - Ax_{k} \rVert^2)}
 \]
-通过求$f$对$A$的偏导，可以得到梯度公式（令$x_{ij} = x_{i} - x_{j}$）
+
+\subsection*{优化算法}
+
+在本实验中我们采用梯度下降法来求解目标函数。
+通过求$f$对$A$的偏导，可以得到梯度公式(令$x_{ij} = x_{i} - x_{j}$)
 \[
 	\frac{\partial f}{\partial A} =
-	-2A \sum_{i} \sum_{j \in C_{i}} p_{ij}( x_{ij} x_{ij}^\top - \sum_{k} p_{ik} x_{ik} x_{ik}^\top)
+	-2A \sum_{i} \sum_{j \in C_{i}}
+	p_{ij}( x_{ij} x_{ij}^\top - \sum_{k} p_{ik} x_{ik} x_{ik}^\top)
 \]
 根据该公式，使用梯度下降法即可求解NCA的目标函数，
 得到最大化近邻分类器留一法正确率的距离度量矩阵$Q$。
 
-\subsection*{优化算法}
-
-
+由于Python的循环操作执行效率不高，
+因此算法优化的关键在于将尽量多的运算转化为矩阵操作，通过numpy提供的函数完成计算。
+由于在此之前没有用过numpy，
+因此在编写代码前我参考了github上的开源实现
+(\href{https://github.com/RolT/NCA-python}{RolT/NCA-python})，
+从中我进一步了解了numpy中比较重要的一种机制: broadcasting。
+虽然该机制在numpy的tutorial中也有介绍，
+但是在实际项目中的代码才使我意识到这种机制对于将运算向量化的重要性。
+因此在我自己实现NCA的过程中也大量使用了broadcasting机制。
+代码编写部分由我自己独立完成，因此与该开源项目的实现存在较大的不同，
+仅参考了其利用broadcasting的思想。
 
 \section*{任务2}
+
+与任务1中的数据集相比，任务2的数据集的维度和样本数都有明显增长，
+这导致内存无法容纳全梯度下降产生的中间结果，训练时间所需也明显上升。
+因此在任务2中我采用了随机抽样的批量梯度下降法，
+在每次迭代开始时都随机选取一定数量的样本进行训练并更新$A$，
+这样能够使训练开销显著下降，同时取得还行的训练效果。
+
+在任务2中，我将$A$初始化为单位矩阵，
+梯度下降的学习率设置为0.005，
+迭代次数设置为750，
+每次迭代随机选取的训练样本数为500。最终结果如下
+
+\begin{tabularx}{\textwidth}{c X}
+\hline
+baseline+knn(k=1) & 0.166880 ± 0.012082 \\
+myMetric+knn(k=1) & 0.103632 ± 0.009503 \\
+baseline+knn(k=3) & 0.206282 ± 0.013218 \\
+myMetric+knn(k=3) & 0.124957 ± 0.010555 \\
+baseline+knn(k=5) & 0.223248 ± 0.013466 \\
+myMetric+knn(k=5) & 0.138932 ± 0.009505 \\
+\hline
+\end{tabularx}
+
+\nocite{*}
+\bibliography{ReadMe}
+
 \end{document}
