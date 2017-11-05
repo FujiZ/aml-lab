@@ -115,16 +115,19 @@ NCA的优化目标是使得$f(A)$最大化，即
 迭代次数设置为750，
 每次迭代随机选取的训练样本数为500。最终结果如下
 
-\begin{tabularx}{\textwidth}{c X}
-\hline
-baseline+knn(k=1) & 0.166880 ± 0.012082 \\
-myMetric+knn(k=1) & 0.103632 ± 0.009503 \\
-baseline+knn(k=3) & 0.206282 ± 0.013218 \\
-myMetric+knn(k=3) & 0.124957 ± 0.010555 \\
-baseline+knn(k=5) & 0.223248 ± 0.013466 \\
-myMetric+knn(k=5) & 0.138932 ± 0.009505 \\
-\hline
-\end{tabularx}
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{rr}
+	\hline
+	baseline+knn(k=1) & 0.166880 ± 0.012082 \\
+	myMetric+knn(k=1) & 0.103632 ± 0.009503 \\
+	baseline+knn(k=3) & 0.206282 ± 0.013218 \\
+	myMetric+knn(k=3) & 0.124957 ± 0.010555 \\
+	baseline+knn(k=5) & 0.223248 ± 0.013466 \\
+	myMetric+knn(k=5) & 0.138932 ± 0.009505 \\
+	\hline
+  \end{tabular}
+\end{table}
 
 \nocite{*}
 \bibliography{ReadMe}
