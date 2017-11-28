@@ -44,17 +44,32 @@ class myHMM(object):
     def HMMViterbi(self, a, b, o, pi):
         # Implements HMM Viterbi algorithm        
 
-        N = np.shape(b)[0]
-        T = np.shape(o)[0]
+        K = np.shape(b)[0]  # K为隐状态数
+        T = np.shape(o)[0]  # T为观测序列长度
 
-        path = np.zeros(T)
-        delta = np.zeros((N, T))
-        phi = np.zeros((N, T))
+        t1 = np.zeros((K, T))  # T_1 in wiki
+        t2 = np.zeros((K, T), dtype=np.int64)  # T_2 in wiki
 
         """
         TODO: implement the viterbi algorithm and return path
         """
-        return path
+        # init dp table
+        t1[:, 0] = pi * b[:, 0]
+        # t2[:, 0] has already initialized to 0
+        # for each observation i
+        for i in range(1, T):
+            # for each state j
+            for j in range(K):
+                tmp = t1[:, i - 1] * a[:, j] * b[j, o[i]]
+                t1[j, i] = np.max(tmp)
+                t2[j, i] = np.argmax(tmp)
+        # init z
+        # x is not needed because we don't have a state space set
+        z = np.zeros(T, dtype=np.int64)
+        z[T - 1] = np.argmax(t1[:, T - 1])
+        for i in range(T - 1, 0, -1):
+            z[i - 1] = t2[z[i], i]
+        return z
 
     def HMMBaumWelch(self, o, N, dirichlet=False, verbose=False, rand_seed=1):
 
@@ -85,7 +100,7 @@ class myHMM(object):
 
         error = self.tolerance + 10
         itter = 0
-        while ((error > self.tolerance) & (itter < self.max_iter)):
+        while (error > self.tolerance) and (itter < self.max_iter):
 
             prev_a = a.copy()
             prev_b = b.copy()
@@ -138,7 +153,7 @@ def parseStockPrices(from_date, to_date, symbol):
 
 def calculateDailyMoves(hist_prices, holding_period):
     assert holding_period > 0, "Holding something less than 0 makes no sense"
-    return (hist_prices[:-holding_period, 1] - hist_prices[holding_period:, 1])
+    return hist_prices[:-holding_period, 1] - hist_prices[holding_period:, 1]
 
 
 if __name__ == '__main__':
