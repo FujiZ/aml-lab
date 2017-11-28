@@ -13,25 +13,25 @@ class myHMM(object):
         self.max_iter = max_iterations
 
     def HMMfwd(self, a, b, o, pi):
-        N = np.shape(b)[0]
-        T = np.shape(o)[0]
+        N = np.shape(b)[0]  # N为状态数
+        T = np.shape(o)[0]  # T为观测序列长度
 
         alpha = np.zeros((N, T))
         alpha[:, 0] = pi * b[:, o[0]]
 
         for t in xrange(1, T):
             for i in xrange(N):
-                """
-                TODO: Do something to update alpha[i,t]
-                """
+                alpha[i, t] = np.dot(alpha[:, t - 1], a[:, i]) * b[i, o[t]]
         return alpha
 
     def HMMbwd(self, a, b, o):
+
         # Implements HMM Backward algorithm
-        T = np.shape(o)[0]
         N = np.shape(b)[0]
+        T = np.shape(o)[0]
+
         beta = np.zeros((N, T))
-        c = np.ones((T))
+        c = np.ones(T)
         beta[:, T - 1] = c[T - 1]
 
         for t in xrange(T - 2, -1, -1):
@@ -50,9 +50,6 @@ class myHMM(object):
         t1 = np.zeros((K, T))  # T_1 in wiki
         t2 = np.zeros((K, T), dtype=np.int64)  # T_2 in wiki
 
-        """
-        TODO: implement the viterbi algorithm and return path
-        """
         # init dp table
         t1[:, 0] = pi * b[:, 0]
         # t2[:, 0] has already initialized to 0
