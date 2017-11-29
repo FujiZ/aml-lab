@@ -21,7 +21,7 @@ class myHMM(object):
 
         for t in xrange(1, T):
             for i in xrange(N):
-                alpha[i, t] = np.dot(alpha[:, t - 1], a[:, i]) * b[i, o[t]]
+                alpha[i, t] = np.dot(alpha[:, t - 1], a[:, i, np.newaxis]) * b[i, o[t]]
         return alpha
 
     def HMMbwd(self, a, b, o):
@@ -30,15 +30,11 @@ class myHMM(object):
         N = np.shape(b)[0]
         T = np.shape(o)[0]
 
-        beta = np.zeros((N, T))
-        c = np.ones(T)
-        beta[:, T - 1] = c[T - 1]
+        beta = np.ones((N, T))
 
         for t in xrange(T - 2, -1, -1):
             for i in xrange(N):
-                """
-                TODO: Do something to update beta[i,t]
-                """
+                beta[i, t] = np.sum(a[i, :] * beta[:, t + 1] * b[:, o[t + 1]])
         return beta
 
     def HMMViterbi(self, a, b, o, pi):

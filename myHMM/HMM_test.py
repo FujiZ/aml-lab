@@ -14,7 +14,7 @@ all_data = hist_prices = myHMM.parseStockPrices(test_start_date, test_end_date, 
 num_correct = 0.0
 test_window = 6
 N = len(all_data)
-num_tests = N / test_window
+num_tests = N // test_window
 for n in xrange(1, N - test_window, test_window):
     train_data = all_data[-n:-n - test_window:-1, :]
     hist_moves = myHMM.calculateDailyMoves(train_data, 1)
