@@ -43,25 +43,25 @@ class myHMM(object):
         K = np.shape(b)[0]  # K为隐状态数
         T = np.shape(o)[0]  # T为观测序列长度
 
-        t1 = np.zeros((K, T))  # T_1 in wiki
-        t2 = np.zeros((K, T), dtype=np.int64)  # T_2 in wiki
+        delta = np.zeros((K, T))  # T_1 in wiki
+        phi = np.zeros((K, T), dtype=np.int64)  # T_2 in wiki
 
         # init dp table
-        t1[:, 0] = pi * b[:, 0]
+        delta[:, 0] = pi * b[:, o[0]]
         # t2[:, 0] has already initialized to 0
         # for each observation i
         for i in range(1, T):
             # for each state j
             for j in range(K):
-                tmp = t1[:, i - 1] * a[:, j] * b[j, o[i]]
-                t1[j, i] = np.max(tmp)
-                t2[j, i] = np.argmax(tmp)
+                tmp = delta[:, i - 1] * a[:, j] * b[j, o[i]]
+                delta[j, i] = np.max(tmp)
+                phi[j, i] = np.argmax(tmp)
         # init z
         # x is not needed because we don't have a state space set
         z = np.zeros(T, dtype=np.int64)
-        z[T - 1] = np.argmax(t1[:, T - 1])
+        z[T - 1] = np.argmax(delta[:, T - 1])
         for i in range(T - 1, 0, -1):
-            z[i - 1] = t2[z[i], i]
+            z[i - 1] = phi[z[i], i]
         return z
 
     def HMMBaumWelch(self, o, N, dirichlet=False, verbose=False, rand_seed=1):
