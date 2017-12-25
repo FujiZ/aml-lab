@@ -18,7 +18,8 @@ class QAgent(object):
         if eps is None:
             eps = self.eps
         if np.random.random() > eps:
-            return np.argmax(self.q[state])
+            # return np.argmax(self.q[state])
+            return np.random.choice(np.flatnonzero(self.q[state] == self.q[state].max()))
         else:
             return self.action_space.sample()  # 以eps概率随机选择action
 
@@ -30,15 +31,13 @@ class QAgent(object):
         for t in range(self.max_step):
             action = self.act(state, self.eps)
             obs, reward, done, _ = env.step(action)
-            if done:
-                reward = -100
             next_state = self.discretize(obs)
             next_action = np.argmax(self.q[state])
             self.q[state][action] += alpha * (reward + gamma * self.q[next_state][next_action] - self.q[state][action])
             if not done:
                 state = next_state
             else:
-                print("Episode finished after {} steps".format(t + 1))
+                # print("Episode finished after {} steps".format(t + 1))
                 break
 
 
@@ -59,7 +58,7 @@ class CartPole(object):
         return max(0.1, min(0.5, 1.0 - math.log10((t + 1) / 25)))
 
     def eps(self, t):
-        return self.eps_start+(self.eps_start-self.eps_end) * math.exp(- t / self.eps_decay)
+        return self.eps_end + (self.eps_start - self.eps_end) * math.exp(- t / self.eps_decay)
 
 
 def main():
@@ -89,16 +88,18 @@ def main():
         # agent.learning_rate = cart_pole.learning_rate(t)
         agent.learn(env)
 
+    print('Test start')
     out_dir = '/home/fuji/tmp/result/cartpole/cur'
     env = gym.wrappers.Monitor(env, directory=out_dir, force=True)
-    state = cart_pole.discretize(env.reset())
-    for t in range(max_step):
-        action = agent.act(state, 0)
-        state, reward, done, _ = env.step(action)
-        state = cart_pole.discretize(state)
-        if done:
-            print("Episode finished after {} steps".format(t + 1))
-            break
+    for i in range(100):
+        state = cart_pole.discretize(env.reset())
+        for t in range(max_step):
+            action = agent.act(state, 0)
+            state, reward, done, _ = env.step(action)
+            state = cart_pole.discretize(state)
+            if done:
+                print("Episode finished after {} steps".format(t + 1))
+                break
     env.close()
 
 

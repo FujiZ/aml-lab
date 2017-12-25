@@ -6,7 +6,6 @@ import gym
 
 import torch
 from torch import nn
-from torch.nn import functional
 from torch.autograd import Variable
 
 
@@ -25,17 +24,24 @@ class ReplayMemory(object):
 
 
 class DQN(nn.Module):
-    def __init__(self, n_action, n_observation):
+    def __init__(self, input_dim, output_dim, hidden_dim):
         super(DQN, self).__init__()
-        self.fc = nn.Linear(n_observation, 50)
-        self.fc.weight.data.normal_(0, 0.1)
-        self.head = nn.Linear(50, n_action)
-        self.head.weight.data.normal_(0, 0.1)
+        self.layer1 = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.PReLU(),
+        )
+        self.layer2 = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.PReLU(),
+        )
+        self.out = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
-        x = self.fc(x)
-        x = functional.relu(x)
-        return self.head(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        return self.out(x)
 
 
 class DQNAgent(object):
@@ -46,18 +52,20 @@ class DQNAgent(object):
         self.discount = discount
         self.batch_size = batch_size
         self.max_step = max_step
-        self.model = DQN(action_space.n, observation_space.shape[0])
-        self.memory = ReplayMemory(2000)
+        self.model = DQN(observation_space.shape[0], action_space.n, 20)
+        self.memory = ReplayMemory(5000)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
-        # self.optimizer = torch.optim.RMSprop(self.model.parameters(), lr=learning_rate)
         self.loss_func = nn.MSELoss()
 
     def act(self, x, eps=None):
         if eps is None:
             eps = self.eps
         if random.random() > eps:
-            actions_value = self.model(Variable(x.unsqueeze(0)))
-            return np.argmax(actions_value.data.numpy())
+            self.model.train(mode=False)
+            actions_value = self.model(Variable(x.unsqueeze(0))).data.numpy()
+            self.model.train(mode=True)
+            # return np.random.choice(np.flatnonzero(actions_value == actions_value.max()))
+            return np.argmax(actions_value)
         else:
             return self.action_space.sample()
 
@@ -77,7 +85,7 @@ class DQNAgent(object):
             if not done:
                 state = next_state
             else:
-                print("Episode finished after {} steps".format(t + 1))
+                print("Learn finished after {} steps".format(t + 1))
                 break
 
     def optimize_model(self):
@@ -98,12 +106,9 @@ class DQNAgent(object):
         # let non_final_next_state_batch to go through model
         # max_a'Q(s_{t+1},a')
         next_state_values = Variable(torch.zeros(self.batch_size).type(torch.FloatTensor))
-        next_state_values[torch.from_numpy(non_final_mask.astype(np.uint8))] =\
+        next_state_values[torch.from_numpy(non_final_mask.astype(np.uint8))] = \
             self.model(non_final_next_state_batch).data.max(1)[0]
 
-        # Now, we don't want to mess up the loss with a volatile flag, so let's
-        # clear it. After this, we'll just end up with a Variable that has
-        # requires_grad=False
         # next_state_values.volatile = False
 
         # y_j
@@ -132,27 +137,28 @@ def main():
         learning_rate=0.01,
         discount=0.999,
         max_step=max_step,
-        batch_size=128
+        batch_size=64,
     )
     eps_start = 0.9
     eps_end = 0.05
     eps_decay = 200
-    for t in range(200):
-        agent.eps = eps_end + (eps_start - eps_end) * \
-                        math.exp(-1. * t / eps_decay)
+    for t in range(300):
+        agent.eps = eps_end + (eps_start - eps_end) * math.exp(-1. * t / eps_decay)
         agent.learn(env)
 
+    print('Test start')
     out_dir = '/home/fuji/tmp/result/cartpole/cur'
     env = gym.wrappers.Monitor(env, directory=out_dir, force=True)
-    state = torch.FloatTensor(env.reset())
-    for t in range(max_step):
-        action = agent.act(state, 0)
-        state, reward, done, _ = env.step(action)
-        if not done:
-            state = torch.FloatTensor(state)
-        else:
-            print("Episode finished after {} steps".format(t + 1))
-            break
+    for i in range(100):
+        state = torch.FloatTensor(env.reset())
+        for t in range(max_step):
+            action = agent.act(state, 0)
+            state, reward, done, _ = env.step(action)
+            if not done:
+                state = torch.FloatTensor(state)
+            else:
+                print("Episode finished after {} steps".format(t + 1))
+                break
     env.close()
 
 
