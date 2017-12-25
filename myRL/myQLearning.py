@@ -1,25 +1,24 @@
-from collections import defaultdict
+import collections
 import numpy as np
 import gym
-from gym import wrappers
+import math
 
 
 class QAgent(object):
-    def __init__(self, action_space, eps, discount, learning_rate, epoch, discretizer):
+    def __init__(self, action_space, eps, learning_rate, discount, max_step, discretize):
         self.action_space = action_space
         self.eps = eps
         self.discount = discount
         self.learning_rate = learning_rate
-        self.epoch = epoch
-        self.discretizer = discretizer
-        self.q = defaultdict(lambda: np.zeros(action_space.n))  # init Q(x,a) to 0
+        self.max_step = max_step
+        self.discretize = discretize
+        self.q = collections.defaultdict(lambda: np.zeros(action_space.n))  # Q(x,a) = 0
 
-    def act(self, obs, eps=None):
-        # obs is discrete state
+    def act(self, state, eps=None):
         if eps is None:
             eps = self.eps
         if np.random.random() > eps:
-            return np.argmax(self.q[obs])  # 以1-eps概率按照policy选择
+            return np.argmax(self.q[state])
         else:
             return self.action_space.sample()  # 以eps概率随机选择action
 
@@ -27,23 +26,27 @@ class QAgent(object):
         alpha = self.learning_rate
         gamma = self.discount
 
-        obs = self.discretizer(env.reset())
-        for t in range(1, self.epoch + 1):
-            # action = self.act(obs, 1 / np.sqrt(t))
-            action = self.act(obs)
-            next_obs, reward, done, _ = env.step(action)
-            next_obs = self.discretizer(next_obs)
-            next_action = np.argmax(self.q[next_obs])
+        state = self.discretize(env.reset())
+        for t in range(self.max_step):
+            action = self.act(state, self.eps)
+            obs, reward, done, _ = env.step(action)
             if done:
                 reward = -100
-            self.q[obs][action] += alpha * (reward + gamma * self.q[next_obs][next_action] - self.q[obs][action])
+            next_state = self.discretize(obs)
+            next_action = np.argmax(self.q[state])
+            self.q[state][action] += alpha * (reward + gamma * self.q[next_state][next_action] - self.q[state][action])
             if not done:
-                obs = next_obs
+                state = next_state
             else:
+                print("Episode finished after {} steps".format(t + 1))
                 break
 
 
 class CartPole(object):
+    eps_start = 0.9
+    eps_end = 0.05
+    eps_decay = 200
+
     def __init__(self, n_bin, min_value, max_value):
         self.n = len(n_bin)
         self.bin = [np.linspace(min_value[i], max_value[i], n_bin[i]) for i in range(self.n)]
@@ -51,44 +54,52 @@ class CartPole(object):
     def discretize(self, obs):
         return tuple([int(np.digitize(obs[i], self.bin[i])) for i in range(self.n)])
 
+    @staticmethod
+    def learning_rate(t):
+        return max(0.1, min(0.5, 1.0 - math.log10((t + 1) / 25)))
+
+    def eps(self, t):
+        return self.eps_start+(self.eps_start-self.eps_end) * math.exp(- t / self.eps_decay)
+
 
 def main():
-    max_steps = 20000
+    max_step = 20000
     gym.envs.register(
         id='CartPoleMyRL-v0',
         entry_point='gym.envs.classic_control:CartPoleEnv',
-        max_episode_steps=max_steps,
-        reward_threshold=19500.0,
+        max_episode_steps=max_step,
+        reward_threshold=19500.0
     )
     env = gym.make('CartPoleMyRL-v0')
     cart_pole = CartPole(
-        n_bin=(8, 8, 8, 8),
-        min_value=(-2.4, -2.0, -0.5, -3.0),
-        max_value=(2.4, 2.0, 0.5, 3.0)
+        n_bin=(10, 10, 10, 10),
+        min_value=(-2.0, -2.0, math.radians(-40), -2.0),
+        max_value=(2.0, 2.0, math.radians(40), 2.0)
     )
     agent = QAgent(
         action_space=env.action_space,
-        eps=0.5,
-        discount=0.9,
-        learning_rate=0.5,
-        epoch=100,
-        discretizer=cart_pole.discretize
+        eps=0.1,
+        learning_rate=0.01,
+        discount=0.999,
+        max_step=max_step,
+        discretize=cart_pole.discretize
     )
-    for t in range(1, 1001):
-        # agent.learning_rate = 1 / np.sqrt(t+1)
-        agent.eps = 1 / np.sqrt(t)
+    for t in range(5000):
+        agent.eps = cart_pole.eps(t)
+        # agent.learning_rate = cart_pole.learning_rate(t)
         agent.learn(env)
 
-    out_dir = '/home/fuji/tmp/cartpole'
-    env = wrappers.Monitor(env, directory=out_dir, force=True)
-    obs = cart_pole.discretize(env.reset())
-    for t in range(max_steps):
-        action = agent.act(obs, 0)
-        obs, reward, done, _ = env.step(action)
-        obs = cart_pole.discretize(obs)
+    out_dir = '/home/fuji/tmp/result/cartpole/cur'
+    env = gym.wrappers.Monitor(env, directory=out_dir, force=True)
+    state = cart_pole.discretize(env.reset())
+    for t in range(max_step):
+        action = agent.act(state, 0)
+        state, reward, done, _ = env.step(action)
+        state = cart_pole.discretize(state)
         if done:
             print("Episode finished after {} steps".format(t + 1))
             break
+    env.close()
 
 
 if __name__ == '__main__':
