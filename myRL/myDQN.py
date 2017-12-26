@@ -62,8 +62,7 @@ class DQNAgent(object):
             eps = self.eps
         if random.random() > eps:
             self.model.train(mode=False)
-            actions_value = self.model(Variable(x.unsqueeze(0))).data.numpy()
-            self.model.train(mode=True)
+            actions_value = self.model(Variable(x.unsqueeze(0), volatile=True)).data.numpy()
             # return np.random.choice(np.flatnonzero(actions_value == actions_value.max()))
             return np.argmax(actions_value)
         else:
@@ -78,19 +77,20 @@ class DQNAgent(object):
                 next_state = torch.FloatTensor(next_state)
             else:
                 # an empty tensor indicating a terminal state
-                next_state = torch.FloatTensor()
                 reward = -100
+                next_state = torch.FloatTensor()
             self.memory.push(state, action, reward, next_state)
-            self.optimize_model()
+            self.train()
             if not done:
                 state = next_state
             else:
                 print("Learn finished after {} steps".format(t + 1))
                 break
 
-    def optimize_model(self):
+    def train(self):
         if len(self.memory) < self.batch_size:
             return
+        self.model.train(mode=True)
         batch = np.array(self.memory.sample(self.batch_size), dtype=object)
 
         state_batch = Variable(torch.stack(batch[:, 0]))
@@ -109,10 +109,9 @@ class DQNAgent(object):
         next_state_values[torch.from_numpy(non_final_mask.astype(np.uint8))] = \
             self.model(non_final_next_state_batch).data.max(1)[0]
 
-        # next_state_values.volatile = False
-
         # y_j
         expected_state_action_values = reward_batch + (self.discount * next_state_values.unsqueeze(1))
+        expected_state_action_values.volatile = False
 
         loss = self.loss_func(state_action_values, expected_state_action_values)
 
@@ -127,7 +126,7 @@ def main():
         id='CartPoleMyRL-v0',
         entry_point='gym.envs.classic_control:CartPoleEnv',
         max_episode_steps=max_step,
-        reward_threshold=19995.0
+        reward_threshold=20000.0
     )
     env = gym.make('CartPoleMyRL-v0')
     agent = DQNAgent(
@@ -135,9 +134,9 @@ def main():
         observation_space=env.observation_space,
         eps=0.9,
         learning_rate=0.01,
-        discount=0.999,
+        discount=0.99,
         max_step=max_step,
-        batch_size=64,
+        batch_size=128,
     )
     eps_start = 0.9
     eps_end = 0.05
@@ -147,8 +146,8 @@ def main():
         agent.learn(env)
 
     print('Test start')
-    out_dir = '/home/fuji/tmp/result/cartpole/cur'
-    env = gym.wrappers.Monitor(env, directory=out_dir, force=True)
+    # out_dir = '/home/fuji/tmp/result/cartpole/cur'
+    # env = gym.wrappers.Monitor(env, directory=out_dir, force=True)
     for i in range(100):
         state = torch.FloatTensor(env.reset())
         for t in range(max_step):
