@@ -45,15 +45,17 @@ class DQN(nn.Module):
 
 
 class DQNAgent(object):
-    def __init__(self, action_space, observation_space, eps,
-                 learning_rate, discount, batch_size, max_step):
+    def __init__(self, action_space, observation_space,
+                 memory_size, batch_size, hidden_dim,
+                 eps=0.1, discount=0.99, learning_rate=0.01,
+                 reward=lambda *arg: arg[1]):
         self.action_space = action_space
+        self.memory = ReplayMemory(memory_size)
+        self.batch_size = batch_size
+        self.model = DQN(observation_space.shape[0], action_space.n, hidden_dim)
         self.eps = eps
         self.discount = discount
-        self.batch_size = batch_size
-        self.max_step = max_step
-        self.model = DQN(observation_space.shape[0], action_space.n, 20)
-        self.memory = ReplayMemory(5000)
+        self.reward = reward
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         self.loss_func = nn.MSELoss()
 
@@ -63,31 +65,30 @@ class DQNAgent(object):
         if random.random() > eps:
             self.model.train(mode=False)
             actions_value = self.model(Variable(x.unsqueeze(0), volatile=True)).data.numpy()
-            # return np.random.choice(np.flatnonzero(actions_value == actions_value.max()))
             return np.argmax(actions_value)
         else:
             return self.action_space.sample()
 
-    def learn(self, env):
+    def train(self, env, max_step):
         state = torch.FloatTensor(env.reset())
-        for t in range(self.max_step):
+        for t in range(max_step):
             action = self.act(state, self.eps)
             next_state, reward, done, _ = env.step(action)
+            reward = self.reward(next_state, reward, done)
             if not done:
                 next_state = torch.FloatTensor(next_state)
             else:
                 # an empty tensor indicating a terminal state
-                reward = -100
                 next_state = torch.FloatTensor()
             self.memory.push(state, action, reward, next_state)
-            self.train()
+            self.learn()
             if not done:
                 state = next_state
             else:
                 print("Learn finished after {} steps".format(t + 1))
                 break
 
-    def train(self):
+    def learn(self):
         if len(self.memory) < self.batch_size:
             return
         self.model.train(mode=True)
@@ -120,46 +121,115 @@ class DQNAgent(object):
         self.optimizer.step()
 
 
-def main():
-    max_step = 20000
-    gym.envs.register(
-        id='CartPoleMyRL-v0',
-        entry_point='gym.envs.classic_control:CartPoleEnv',
-        max_episode_steps=max_step,
-        reward_threshold=20000.0
-    )
-    env = gym.make('CartPoleMyRL-v0')
-    agent = DQNAgent(
-        action_space=env.action_space,
-        observation_space=env.observation_space,
-        eps=0.9,
-        learning_rate=0.01,
-        discount=0.99,
-        max_step=max_step,
-        batch_size=128,
-    )
-    eps_start = 0.9
-    eps_end = 0.05
-    eps_decay = 200
-    for t in range(300):
-        agent.eps = eps_end + (eps_start - eps_end) * math.exp(-1. * t / eps_decay)
-        agent.learn(env)
+class CartPole(object):
+    def __init__(self):
+        self.env = gym.make('CartPoleMyRL-v0')
+        self.max_step = 20000
+        self.eps_start = 0.9
+        self.eps_end = 0.05
+        self.eps_decay = 300
+        self.agent = DQNAgent(
+            action_space=self.env.action_space,
+            observation_space=self.env.observation_space,
+            memory_size=5000,
+            batch_size=128,
+            hidden_dim=20,
+            discount=0.99,
+            learning_rate=0.01,
+            reward=self.reward,
+        )
 
-    print('Test start')
-    # out_dir = '/home/fuji/tmp/result/cartpole/cur'
-    # env = gym.wrappers.Monitor(env, directory=out_dir, force=True)
-    for i in range(100):
-        state = torch.FloatTensor(env.reset())
-        for t in range(max_step):
-            action = agent.act(state, 0)
-            state, reward, done, _ = env.step(action)
+    def train(self, episode):
+        for t in range(episode):
+            self.agent.eps = self.eps(t)
+            self.agent.train(self.env, self.max_step)
+
+    def test(self):
+        state = torch.FloatTensor(self.env.reset())
+        for t in range(self.max_step):
+            action = self.agent.act(state, 0)
+            state, reward, done, _ = self.env.step(action)
             if not done:
                 state = torch.FloatTensor(state)
             else:
                 print("Episode finished after {} steps".format(t + 1))
                 break
-    env.close()
+
+    def eps(self, step):
+        return self.eps_end + (self.eps_start - self.eps_end) * math.exp(-step / self.eps_decay)
+
+    @staticmethod
+    def reward(obs, reward, done):
+        if not done:
+            return reward
+        else:
+            return -100
+
+
+class MountainCar(object):
+    def __init__(self):
+        self.env = gym.make('MountainCarMyRL-v0')
+        self.max_step = 200
+        self.eps_start = 0.9
+        self.eps_end = 0.05
+        self.eps_decay = 200
+        self.agent = DQNAgent(
+            action_space=self.env.action_space,
+            observation_space=self.env.observation_space,
+            memory_size=5000,
+            batch_size=128,
+            hidden_dim=20,
+            discount=0.99,
+            learning_rate=0.01,
+            reward=self.reward,
+        )
+
+    def train(self, episode):
+        for t in range(episode):
+            self.agent.eps = self.eps(t)
+            self.agent.train(self.env, self.max_step)
+
+    def test(self):
+        state = torch.FloatTensor(self.env.reset())
+        for t in range(self.max_step):
+            action = self.agent.act(state, 0)
+            state, reward, done, _ = self.env.step(action)
+            if not done:
+                state = torch.FloatTensor(state)
+            else:
+                print("Episode finished after {} steps".format(t + 1))
+                break
+
+    def eps(self, step):
+        return self.eps_end + (self.eps_start - self.eps_end) * math.exp(-step / self.eps_decay)
+
+    @staticmethod
+    def reward(obs, reward, done):
+        if not done:
+            return reward
+        else:
+            return 100
 
 
 if __name__ == '__main__':
-    main()
+    cart_pole_max_step = 20000
+    gym.envs.register(
+        id='CartPoleMyRL-v0',
+        entry_point='gym.envs.classic_control:CartPoleEnv',
+        max_episode_steps=cart_pole_max_step,
+        reward_threshold=20000.0,
+    )
+    mountain_car_max_step = 200
+    gym.envs.register(
+        id='MountainCarMyRL-v0',
+        entry_point='gym.envs.classic_control:MountainCarEnv',
+        max_episode_steps=mountain_car_max_step,
+        reward_threshold=-110.0,
+    )
+    # mountain_car = MountainCar()
+    # mountain_car.train(300)
+    cart_pole = CartPole()
+    cart_pole.train(300)
+    cart_pole.test()
+    # for i in range(100):
+    #  cart_pole.test()
