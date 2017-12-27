@@ -47,7 +47,7 @@ class DQN(nn.Module):
 class DQNAgent(object):
     def __init__(self, action_space, observation_space,
                  memory_size, batch_size, hidden_dim,
-                 eps=0.1, discount=0.99, learning_rate=0.01,
+                 eps=0.1, discount=0.99, learning_rate=0.001,
                  reward=lambda *arg: arg[1]):
         self.action_space = action_space
         self.memory = ReplayMemory(memory_size)
@@ -100,7 +100,7 @@ class DQNAgent(object):
         # Q(s_j, a_j)
         state_action_values = self.model(state_batch).gather(1, action_batch)
 
-        # select non final entries
+        # select non final samples
         non_final_mask = np.vectorize(lambda x: x.dim() != 0)(batch[:, 3])
         non_final_next_state_batch = Variable(torch.stack(batch[non_final_mask, 3]))
 
@@ -121,30 +121,24 @@ class DQNAgent(object):
         self.optimizer.step()
 
 
-class CartPole(object):
-    def __init__(self):
-        self.env = gym.make('CartPoleMyRL-v0')
-        self.max_step = 20000
-        self.eps_start = 0.9
-        self.eps_end = 0.05
-        self.eps_decay = 300
-        self.agent = DQNAgent(
-            action_space=self.env.action_space,
-            observation_space=self.env.observation_space,
-            memory_size=5000,
-            batch_size=128,
-            hidden_dim=20,
-            discount=0.99,
-            learning_rate=0.01,
-            reward=self.reward,
-        )
+class DQNHelper(object):
+    def __init__(self, env, agent, max_step,
+                 eps_start, eps_end, eps_decay):
+        self.env = env
+        self.agent = agent
+        self.max_step = max_step
+        self.eps_start = eps_start
+        self.eps_end = eps_end
+        self.eps_decay = eps_decay
+        self.episodes_done = 0
 
     def train(self, episode):
         for t in range(episode):
-            self.agent.eps = self.eps(t)
+            self.agent.eps = self.eps(self.episodes_done)
             self.agent.train(self.env, self.max_step)
+            self.episodes_done += 1
 
-    def test(self):
+    def play(self):
         state = torch.FloatTensor(self.env.reset())
         for t in range(self.max_step):
             action = self.agent.act(state, 0)
@@ -157,6 +151,28 @@ class CartPole(object):
 
     def eps(self, step):
         return self.eps_end + (self.eps_start - self.eps_end) * math.exp(-step / self.eps_decay)
+
+
+class CartPole(DQNHelper):
+    def __init__(self):
+        env = gym.make('CartPoleMyRL-v0')
+        super(CartPole, self).__init__(
+            env=env,
+            agent=DQNAgent(
+                action_space=env.action_space,
+                observation_space=env.observation_space,
+                memory_size=10000,
+                batch_size=128,
+                hidden_dim=50,
+                discount=0.999,
+                learning_rate=0.001,
+                reward=self.reward,
+            ),
+            max_step=20000,
+            eps_start=0.9,
+            eps_end=0.05,
+            eps_decay=200,
+        )
 
     @staticmethod
     def reward(obs, reward, done):
@@ -166,42 +182,55 @@ class CartPole(object):
             return -100
 
 
-class MountainCar(object):
+class MountainCar(DQNHelper):
     def __init__(self):
-        self.env = gym.make('MountainCarMyRL-v0')
-        self.max_step = 200
-        self.eps_start = 0.9
-        self.eps_end = 0.05
-        self.eps_decay = 200
-        self.agent = DQNAgent(
-            action_space=self.env.action_space,
-            observation_space=self.env.observation_space,
-            memory_size=5000,
-            batch_size=128,
-            hidden_dim=20,
-            discount=0.99,
-            learning_rate=0.01,
-            reward=self.reward,
+        env = gym.make('MountainCarMyRL-v0')
+        super(MountainCar, self).__init__(
+            env=env,
+            agent=DQNAgent(
+                action_space=env.action_space,
+                observation_space=env.observation_space,
+                memory_size=10000,
+                batch_size=128,
+                hidden_dim=50,
+                discount=0.99,
+                learning_rate=0.001,
+                reward=self.reward,
+            ),
+            max_step=2000,
+            eps_start=0.9,
+            eps_end=0.05,
+            eps_decay=100,
         )
 
-    def train(self, episode):
-        for t in range(episode):
-            self.agent.eps = self.eps(t)
-            self.agent.train(self.env, self.max_step)
+    @staticmethod
+    def reward(obs, reward, done):
+        if not done:
+            return reward
+        else:
+            return 100
 
-    def test(self):
-        state = torch.FloatTensor(self.env.reset())
-        for t in range(self.max_step):
-            action = self.agent.act(state, 0)
-            state, reward, done, _ = self.env.step(action)
-            if not done:
-                state = torch.FloatTensor(state)
-            else:
-                print("Episode finished after {} steps".format(t + 1))
-                break
 
-    def eps(self, step):
-        return self.eps_end + (self.eps_start - self.eps_end) * math.exp(-step / self.eps_decay)
+class Acrobot(DQNHelper):
+    def __init__(self):
+        env = gym.make('AcrobotMyRL-v0')
+        super(Acrobot, self).__init__(
+            env=env,
+            agent=DQNAgent(
+                action_space=env.action_space,
+                observation_space=env.observation_space,
+                memory_size=5000,
+                batch_size=128,
+                hidden_dim=50,
+                discount=0.9,
+                learning_rate=0.001,
+                reward=self.reward,
+            ),
+            max_step=2000,
+            eps_start=0.9,
+            eps_end=0.05,
+            eps_decay=100,
+        )
 
     @staticmethod
     def reward(obs, reward, done):
@@ -217,19 +246,26 @@ if __name__ == '__main__':
         id='CartPoleMyRL-v0',
         entry_point='gym.envs.classic_control:CartPoleEnv',
         max_episode_steps=cart_pole_max_step,
-        reward_threshold=20000.0,
+        reward_threshold=19995.0,
     )
-    mountain_car_max_step = 200
+    mountain_car_max_step = 2000
     gym.envs.register(
         id='MountainCarMyRL-v0',
         entry_point='gym.envs.classic_control:MountainCarEnv',
         max_episode_steps=mountain_car_max_step,
         reward_threshold=-110.0,
     )
+    acrobot_max_step = 2000
+    gym.envs.register(
+        id='AcrobotMyRL-v0',
+        entry_point='gym.envs.classic_control:AcrobotEnv',
+        max_episode_steps=acrobot_max_step,
+    )
+    # cart_pole = CartPole()
+    # cart_pole.train(100)
     # mountain_car = MountainCar()
-    # mountain_car.train(300)
-    cart_pole = CartPole()
-    cart_pole.train(300)
-    cart_pole.test()
+    # mountain_car.train(10)
+    acrobot = Acrobot()
+    acrobot.train(10)
     # for i in range(100):
     #  cart_pole.test()
