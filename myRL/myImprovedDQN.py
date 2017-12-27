@@ -7,6 +7,7 @@ from torch import nn
 from torch.autograd import Variable
 
 import myDQN
+import utils
 
 
 class ImprovedDQNAgent(object):
@@ -184,26 +185,7 @@ class Acrobot(myDQN.DQNHelper):
 
 
 if __name__ == '__main__':
-    cart_pole_max_step = 20000
-    gym.envs.register(
-        id='CartPoleMyRL-v0',
-        entry_point='gym.envs.classic_control:CartPoleEnv',
-        max_episode_steps=cart_pole_max_step,
-        reward_threshold=19995.0,
-    )
-    mountain_car_max_step = 2000
-    gym.envs.register(
-        id='MountainCarMyRL-v0',
-        entry_point='gym.envs.classic_control:MountainCarEnv',
-        max_episode_steps=mountain_car_max_step,
-        reward_threshold=-110.0,
-    )
-    acrobot_max_step = 2000
-    gym.envs.register(
-        id='AcrobotMyRL-v0',
-        entry_point='gym.envs.classic_control:AcrobotEnv',
-        max_episode_steps=acrobot_max_step,
-    )
+    utils.register_env()
     # pole = CartPole()
     # pole.train(100)
     car = MountainCar()
