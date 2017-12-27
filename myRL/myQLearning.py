@@ -15,11 +15,8 @@ class QAgent(object):
         self.q = collections.defaultdict(lambda: np.zeros(action_space.n))  # Q(x,a) = 0
 
     def act(self, state, eps=None):
-        if eps is None:
-            eps = self.eps
-        if np.random.random() > eps:
-            # return np.argmax(self.q[state])
-            return np.random.choice(np.flatnonzero(self.q[state] == self.q[state].max()))
+        if eps is None or np.random.random() > eps:
+            return np.argmax(self.q[state])
         else:
             return self.action_space.sample()  # 以eps概率随机选择action
 

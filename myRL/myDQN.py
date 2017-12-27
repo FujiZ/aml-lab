@@ -47,32 +47,34 @@ class DQN(nn.Module):
 class DQNAgent(object):
     def __init__(self, action_space, observation_space,
                  memory_size, batch_size, hidden_dim,
-                 eps=0.1, discount=0.99, learning_rate=0.001,
+                 discount=0.99, learning_rate=0.001,
                  reward=lambda *arg: arg[1]):
         self.action_space = action_space
         self.memory = ReplayMemory(memory_size)
         self.batch_size = batch_size
         self.model = DQN(observation_space.shape[0], action_space.n, hidden_dim)
-        self.eps = eps
         self.discount = discount
         self.reward = reward
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         self.loss_func = nn.MSELoss()
 
     def act(self, x, eps=None):
-        if eps is None:
-            eps = self.eps
-        if random.random() > eps:
+        """
+        :param x:
+        :param eps: if eps is None, we use our model directly.
+        :return:
+        """
+        if eps is None or random.random() > eps:
             self.model.train(mode=False)
             actions_value = self.model(Variable(x.unsqueeze(0), volatile=True)).data.numpy()
             return np.argmax(actions_value)
         else:
             return self.action_space.sample()
 
-    def train(self, env, max_step):
+    def train(self, env, max_step, eps):
         state = torch.FloatTensor(env.reset())
         for t in range(max_step):
-            action = self.act(state, self.eps)
+            action = self.act(state, eps)
             next_state, reward, done, _ = env.step(action)
             reward = self.reward(next_state, reward, done)
             if not done:
@@ -85,7 +87,7 @@ class DQNAgent(object):
             if not done:
                 state = next_state
             else:
-                print("Learn finished after {} steps".format(t + 1))
+                print("Train finished after {} steps".format(t + 1))
                 break
 
     def learn(self):
@@ -134,19 +136,18 @@ class DQNHelper(object):
 
     def train(self, episode):
         for t in range(episode):
-            self.agent.eps = self.eps(self.episodes_done)
-            self.agent.train(self.env, self.max_step)
+            self.agent.train(self.env, self.max_step, self.eps(self.episodes_done))
             self.episodes_done += 1
 
     def play(self):
         state = torch.FloatTensor(self.env.reset())
         for t in range(self.max_step):
-            action = self.agent.act(state, 0)
+            action = self.agent.act(state)
             state, reward, done, _ = self.env.step(action)
             if not done:
                 state = torch.FloatTensor(state)
             else:
-                print("Episode finished after {} steps".format(t + 1))
+                print("Play finished after {} steps".format(t + 1))
                 break
 
     def eps(self, step):
