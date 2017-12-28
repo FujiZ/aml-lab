@@ -59,6 +59,8 @@ class DQNAgent(object):
         self.reward = reward
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
         self.loss_func = nn.MSELoss()
+        # plot related args
+        self.loss_list = []
 
     def act(self, x, eps=None):
         """
@@ -74,6 +76,8 @@ class DQNAgent(object):
             return self.action_space.sample()
 
     def train(self, env, max_step, eps):
+        loss = 0.0
+        learn_count = 0
         state = torch.FloatTensor(env.reset())
         for t in range(max_step):
             action = self.act(state, eps)
@@ -85,16 +89,18 @@ class DQNAgent(object):
                 # an empty tensor indicating a terminal state
                 next_state = torch.FloatTensor()
             self.memory.push(state, action, reward, next_state)
-            self.learn()
+            if len(self.memory) >= self.batch_size:
+                loss += self.learn()
+                learn_count += 1
             if not done:
                 state = next_state
             else:
                 print("Train finished after {} steps".format(t + 1))
+                if learn_count > 0:
+                    self.loss_list.append(loss / learn_count)
                 break
 
     def learn(self):
-        if len(self.memory) < self.batch_size:
-            return
         self.model.train(mode=True)
         batch = np.array(self.memory.sample(self.batch_size), dtype=object)
 
@@ -111,18 +117,19 @@ class DQNAgent(object):
         # let non_final_next_state_batch to go through model
         # max_a'Q(s_{t+1},a')
         next_state_values = Variable(torch.zeros(self.batch_size).type(torch.FloatTensor))
+        next_state_values.volatile = True
         next_state_values[torch.from_numpy(non_final_mask.astype(np.uint8))] = \
-            self.model(non_final_next_state_batch).data.max(1)[0]
+            self.model(non_final_next_state_batch).max(1)[0]
 
         # y_j
         expected_state_action_values = reward_batch + (self.discount * next_state_values.unsqueeze(1))
-        expected_state_action_values.volatile = False
 
         loss = self.loss_func(state_action_values, expected_state_action_values)
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        return float(loss)
 
 
 class DQNHelper(object):
@@ -155,6 +162,9 @@ class DQNHelper(object):
     def eps(self, step):
         return self.eps_end + (self.eps_start - self.eps_end) * math.exp(-step / self.eps_decay)
 
+    def plot_loss(self):
+        utils.plot('Average Loss', 'Training Epochs', 'Average Loss per Episode', self.agent.loss_list)
+
 
 class CartPole(DQNHelper):
     def __init__(self):
@@ -167,7 +177,7 @@ class CartPole(DQNHelper):
                 memory_size=10000,
                 batch_size=128,
                 hidden_dim=50,
-                discount=0.999,
+                discount=0.99,
                 learning_rate=0.001,
                 reward=self.reward,
             ),
@@ -203,7 +213,7 @@ class MountainCar(DQNHelper):
             max_step=2000,
             eps_start=0.9,
             eps_end=0.05,
-            eps_decay=100,
+            eps_decay=50,
         )
 
     @staticmethod
@@ -245,11 +255,9 @@ class Acrobot(DQNHelper):
 
 if __name__ == '__main__':
     utils.register_env()
-    # cart_pole = CartPole()
-    # cart_pole.train(100)
-    # mountain_car = MountainCar()
-    # mountain_car.train(10)
-    acrobot = Acrobot()
-    acrobot.train(10)
-    # for i in range(100):
-    #  cart_pole.test()
+    pole = CartPole()
+    pole.train(100)
+    # car = MountainCar()
+    # car.train(10)
+    # acrobot = Acrobot()
+    # acrobot.train(10)

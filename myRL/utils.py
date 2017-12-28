@@ -1,4 +1,5 @@
 import gym
+import matplotlib.pyplot as plt
 
 
 def register_env():
@@ -21,3 +22,11 @@ def register_env():
         entry_point='gym.envs.classic_control:AcrobotEnv',
         max_episode_steps=2000,
     )
+
+
+def plot(title, xlabel, ylabel, y):
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.plot(y)
+    plt.show()
