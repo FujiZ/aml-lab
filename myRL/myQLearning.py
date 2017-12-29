@@ -195,9 +195,9 @@ class Acrobot(QHelper):
 
 if __name__ == '__main__':
     utils.register_env()
-    # pole = CartPole()
-    # pole.train(1000)
+    pole = CartPole()
+    pole.train(10000)
     # car = MountainCar()
     # car.train(2000)
-    acrobot = Acrobot()
-    acrobot.train(1000)
+    # acrobot = Acrobot()
+    # acrobot.train(1000)

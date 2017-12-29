@@ -28,7 +28,9 @@ class ImprovedDQNAgent(object):
         self.reward = reward
         self.optimizer = torch.optim.Adam(self.eval_model.parameters(), lr=learning_rate)
         self.loss_func = nn.MSELoss()
+        # plot related args
         self.loss_list = []
+        self.reward_list = []
 
     def act(self, x, eps=None):
         if eps is None or random.random() > eps:
@@ -40,11 +42,13 @@ class ImprovedDQNAgent(object):
 
     def train(self, env, max_step, eps):
         loss = 0.0
+        total_reward = 0.0
         learn_count = 0
         state = torch.FloatTensor(env.reset())
         for t in range(max_step):
             action = self.act(state, eps)
             next_state, reward, done, _ = env.step(action)
+            total_reward += reward
             reward = self.reward(next_state, reward, done)
             if not done:
                 next_state = torch.FloatTensor(next_state)
@@ -61,6 +65,7 @@ class ImprovedDQNAgent(object):
                 print("Train finished after {} steps".format(t + 1))
                 if learn_count > 0:
                     self.loss_list.append(loss / learn_count)
+                self.reward_list.append(total_reward)
                 break
 
     def learn(self):
@@ -192,9 +197,9 @@ class Acrobot(myDQN.DQNHelper):
 
 if __name__ == '__main__':
     utils.register_env()
-    pole = CartPole()
-    pole.train(200)
+    # pole = CartPole()
+    # pole.train(200)
     # car = MountainCar()
     # car.train(10)
-    # acrobot = Acrobot()
-    # acrobot.train(10)
+    bot = Acrobot()
+    bot.train(10)

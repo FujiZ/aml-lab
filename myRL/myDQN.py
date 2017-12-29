@@ -61,6 +61,7 @@ class DQNAgent(object):
         self.loss_func = nn.MSELoss()
         # plot related args
         self.loss_list = []
+        self.reward_list = []
 
     def act(self, x, eps=None):
         """
@@ -77,11 +78,13 @@ class DQNAgent(object):
 
     def train(self, env, max_step, eps):
         loss = 0.0
+        total_reward = 0.0
         learn_count = 0
         state = torch.FloatTensor(env.reset())
         for t in range(max_step):
             action = self.act(state, eps)
             next_state, reward, done, _ = env.step(action)
+            total_reward += reward
             reward = self.reward(next_state, reward, done)
             if not done:
                 next_state = torch.FloatTensor(next_state)
@@ -98,6 +101,7 @@ class DQNAgent(object):
                 print("Train finished after {} steps".format(t + 1))
                 if learn_count > 0:
                     self.loss_list.append(loss / learn_count)
+                self.reward_list.append(total_reward)
                 break
 
     def learn(self):
@@ -164,6 +168,9 @@ class DQNHelper(object):
 
     def plot_loss(self):
         utils.plot('Average Loss', 'Training Epochs', 'Average Loss per Episode', self.agent.loss_list)
+
+    def plot_reward(self):
+        utils.plot('Average Reward', 'Training Epochs', 'Average Reward per Episode', self.agent.reward_list)
 
 
 class CartPole(DQNHelper):
@@ -235,14 +242,14 @@ class Acrobot(DQNHelper):
                 memory_size=5000,
                 batch_size=128,
                 hidden_dim=50,
-                discount=0.9,
+                discount=0.99,
                 learning_rate=0.001,
                 reward=self.reward,
             ),
             max_step=2000,
             eps_start=0.9,
             eps_end=0.05,
-            eps_decay=100,
+            eps_decay=200,
         )
 
     @staticmethod
@@ -255,9 +262,9 @@ class Acrobot(DQNHelper):
 
 if __name__ == '__main__':
     utils.register_env()
-    pole = CartPole()
-    pole.train(100)
+    # pole = CartPole()
+    # pole.train(200)
     # car = MountainCar()
     # car.train(10)
-    # acrobot = Acrobot()
-    # acrobot.train(10)
+    bot = Acrobot()
+    bot.train(10)
