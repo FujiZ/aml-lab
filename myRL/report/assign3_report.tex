@@ -45,7 +45,7 @@
 \subsection*{Deep Q-network(DQN)实现}
 
 在本实验中，我选择使用PyTorch来实现DQN。
-在定义Q值网络时我使用了MLP，其中网络结构由3层Linear构成，激活函数使用PReLU，
+在定义Q值网络时我使用了MLP，其中网络结构由3层Linear构成；激活函数使用PReLU，
 同时在每个隐层中增加Batch Norm来对相应的activation做规范化操作。
 另外，在DQN中我采用\lstinline[language=Python]{optim.Adam}作为优化函数，
 用\lstinline[language=Python]{nn.MSELoss()}来计算均方误差。
@@ -77,9 +77,10 @@ class DQN(nn.Module):
 \subsection*{CartPole}
 
 针对CartPole，DQN的超参数设置如表\ref{tab:pole-dqn}所示。
-其中$\epsilon$的衰减公式同公式(sdfdsf)。
+% TODO 公式ref
+其中$\epsilon$的衰减公式同公式(abcd)。
 
-\begin{table}[htbp]
+\begin{table}[H]
 	\centering
 	\begin{tabular}{ccc}
 		\toprule
@@ -98,9 +99,18 @@ class DQN(nn.Module):
 	\caption{DQN超参数设置(CartPole)}\label{tab:pole-dqn}
 \end{table}
 
-DQN在CartPole的实验结果如图\ref{fig:pole-dqn}所示。
+DQN在CartPole上的实验结果如图\ref{fig:pole-dqn}所示。
+%TODO 说明图中的信息
+可以观察到Loss在超过450轮后达到收敛的状态。
+由于$\epsilon$的最小值被设置为0.05，因此即使Training了较多轮数，
+DQN依旧会以5\%的概率随机选择Action。
+而CartPole似乎对于错误的Action比较敏感，
+当随机到错误的Action时，可能会导致该轨迹提前结束。
+因此在Training阶段Reward似乎并没有收敛到一个固定值，
+然而我们可以观察到随着Training轮数的增加，
+Reward的上限也在不断提高，这也从侧面体现出了训练是有效果的。
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 	\centering
 	\begin{subfigure}[t]{0.5\textwidth}
 		\centering
@@ -139,7 +149,9 @@ DQN在CartPole的实验结果如图\ref{fig:pole-dqn}所示。
 	\caption{DQN超参数设置(MountainCar)}\label{tab:car-dqn}
 \end{table}
 
-DQN在MountainCar的实验结果如图\ref{fig:car-dqn}所示。
+DQN在MountainCar上的实验结果如图\ref{fig:car-dqn}所示。
+其中Reward在超过200轮之后达到收敛的状态，
+而Loss也在超过200轮之后达到了基本稳定的状态。
 
 \begin{figure}[H]
 	\centering
@@ -179,7 +191,8 @@ DQN在MountainCar的实验结果如图\ref{fig:car-dqn}所示。
 	\caption{DQN超参数设置(Acrobot)}\label{tab:bot-dqn}
 \end{table}
 
-DQN在Acrobot的实验结果如图\ref{fig:bot-dqn}所示。
+DQN在Acrobot上的实验结果如图\ref{fig:bot-dqn}所示。
+在超过40轮之后，Loss达到了较低的水平，并且Reward也趋近于收敛。
 
 \begin{figure}[H]
 	\centering
@@ -199,6 +212,8 @@ DQN在Acrobot的实验结果如图\ref{fig:bot-dqn}所示。
 \section*{实验四.}
 
 \subsection*{CartPole}
+
+针对CartPole，Improved DQN的超参数设置如表\ref{tab:pole-idqn}所示。
 
 \begin{table}[H]
 	\centering
@@ -221,6 +236,7 @@ DQN在Acrobot的实验结果如图\ref{fig:bot-dqn}所示。
 \end{table}
 
 Improved DQN在CartPole上的实验结果如图\ref{fig:pole-idqn}所示。
+% TODO 介绍结果以及和DQN的区别
 
 \begin{figure}[htbp]
 	\centering
