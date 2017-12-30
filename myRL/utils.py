@@ -1,5 +1,6 @@
 import gym
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def register_env():
@@ -29,4 +30,22 @@ def plot(title, xlabel, ylabel, y):
     plt.ylabel(ylabel)
     plt.title(title)
     plt.plot(y)
+    plt.show()
+
+
+def plot_loss(title, in_file):
+    plt.xlabel('Training Epochs')
+    plt.ylabel('Average Loss per Episode')
+    plt.title(title)
+    loss = np.load(in_file)
+    plt.plot(range(1, len(loss) + 1), loss)
+    plt.show()
+
+
+def plot_reward(title, in_file):
+    plt.xlabel('Training Epochs')
+    plt.ylabel('Average Reward per Episode')
+    plt.title(title)
+    reward = np.load(in_file)
+    plt.plot(range(1, len(reward) + 1), reward)
     plt.show()
