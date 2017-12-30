@@ -197,9 +197,12 @@ class Acrobot(myDQN.DQNHelper):
 
 if __name__ == '__main__':
     utils.register_env()
-    # pole = CartPole()
+    pole = CartPole()
+    pole.agent.eval_model.load_state_dict(torch.load('model/pole-idqn-6.pkl'))
     # pole.train(200)
-    # car = MountainCar()
+    car = MountainCar()
+    car.agent.eval_model.load_state_dict(torch.load('model/car-idqn-6.pkl'))
     # car.train(10)
     bot = Acrobot()
-    bot.train(10)
+    bot.agent.eval_model.load_state_dict(torch.load('model/bot-idqn-7.pkl'))
+    # bot.train(10)

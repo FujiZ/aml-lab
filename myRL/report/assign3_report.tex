@@ -15,6 +15,10 @@
 \usepackage{enumerate}
 \usepackage{algorithm}
 \usepackage{algorithmic}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{listings}
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Procedure:}}
 \renewcommand\refname{参考文献}
@@ -31,35 +35,285 @@
 
 
 
-\section*{实验二. }
+\section*{实验二.}
 
 
 
-\section*{实验三. }
-
+\section*{实验三.}
 
 
 \subsection*{Deep Q-network(DQN)实现}
 
-在本实验中，我使用PyTorch来实现DQN。
+在本实验中，我选择使用PyTorch来实现DQN。
+在定义Q值网络时我使用了MLP，其中网络结构由3层Linear构成，激活函数使用PReLU，
+同时在每个隐层中增加Batch Norm来对相应的activation做规范化操作。
+另外，在DQN中我采用\lstinline[language=Python]{optim.Adam}作为优化函数，
+用\lstinline[language=Python]{nn.MSELoss()}来计算均方误差。
 
+Q值网络的定义如下所示：
 
+\begin{lstlisting}[language=Python]
+class DQN(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim):
+        super(DQN, self).__init__()
+        self.layer1 = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.PReLU(),
+        )
+        self.layer2 = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.PReLU(),
+        )
+        self.out = nn.Linear(hidden_dim, output_dim)
 
-% TODO use pytorch
-% network structure
-% 贴代码？
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
+        return self.out(x)
+\end{lstlisting}
 
 \subsection*{CartPole}
 
-% 参数用表格展示
-% 对reward的定义
+针对CartPole，DQN的超参数设置如表\ref{tab:pole-dqn}所示。
+其中$\epsilon$的衰减公式同公式(sdfdsf)。
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{ccc}
+		\toprule
+		超参数 & 参数意义 & 参数值 \\
+		\midrule
+		memory\_size & Replay Memory的大小 & 10000 \\
+		batch\_size & mini-batch的大小 & 128 \\
+		hidden\_dim & DQN的隐层维度 & 50 \\
+		discount & DQN算法中的$\gamma$ & 0.99 \\
+		learning\_rate & DQN算法中的$\alpha$ & 0.001 \\
+		eps\_start & $\epsilon$的初始值 & 0.9 \\
+		eps\_end & $\epsilon$的结束值 & 0.05 \\
+		eps\_decay & $\epsilon$的衰减权重 & 200 \\
+		\bottomrule
+	\end{tabular}
+	\caption{DQN超参数设置(CartPole)}\label{tab:pole-dqn}
+\end{table}
+
+DQN在CartPole的实验结果如图\ref{fig:pole-dqn}所示。
+
+\begin{figure}[htbp]
+	\centering
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/pole-dqn-loss}
+		\caption{Average Loss}
+	\end{subfigure}%
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/pole-dqn-reward}
+		\caption{Average Reward}
+	\end{subfigure}
+	\caption{Training Result of CartPole using DQN}\label{fig:pole-dqn}
+\end{figure}
+
 
 \subsection*{MountainCar}
 
+针对MountainCar，DQN的超参数设置如表\ref{tab:car-dqn}所示。
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccc}
+		\toprule
+		超参数 & 参数意义 & 参数值 \\
+		\midrule
+		memory\_size & Replay Memory的大小 & 10000 \\
+		batch\_size & mini-batch的大小 & 128 \\
+		hidden\_dim & DQN的隐层维度 & 50 \\
+		discount & DQN算法中的$\gamma$ & 0.99 \\
+		learning\_rate & DQN算法中的$\alpha$ & 0.001 \\
+		eps\_start & $\epsilon$的初始值 & 0.9 \\
+		eps\_end & $\epsilon$的结束值 & 0.05 \\
+		eps\_decay & $\epsilon$的衰减权重 & 50 \\
+		\bottomrule
+	\end{tabular}
+	\caption{DQN超参数设置(MountainCar)}\label{tab:car-dqn}
+\end{table}
+
+DQN在MountainCar的实验结果如图\ref{fig:car-dqn}所示。
+
+\begin{figure}[H]
+	\centering
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/car-dqn-loss}
+		\caption{Average Loss}
+	\end{subfigure}%
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/car-dqn-reward}
+		\caption{Average Reward}
+	\end{subfigure}
+	\caption{Training Result of MountainCar using DQN}\label{fig:car-dqn}
+\end{figure}
+
 \subsection*{Acrobot}
 
-\section*{实验四. }
+针对Acrobot，DQN的超参数设置如表\ref{tab:bot-dqn}所示。
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccc}
+		\toprule
+		超参数 & 参数意义 & 参数值 \\
+		\midrule
+		memory\_size & Replay Memory的大小 & 5000 \\
+		batch\_size & mini-batch的大小 & 128 \\
+		hidden\_dim & DQN的隐层维度 & 50 \\
+		discount & DQN算法中的$\gamma$ & 0.99 \\
+		learning\_rate & DQN算法中的$\alpha$ & 0.001 \\
+		eps\_start & $\epsilon$的初始值 & 0.9 \\
+		eps\_end & $\epsilon$的结束值 & 0.05 \\
+		eps\_decay & $\epsilon$的衰减权重 & 200 \\
+		\bottomrule
+	\end{tabular}
+	\caption{DQN超参数设置(Acrobot)}\label{tab:bot-dqn}
+\end{table}
+
+DQN在Acrobot的实验结果如图\ref{fig:bot-dqn}所示。
+
+\begin{figure}[H]
+	\centering
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/bot-dqn-loss}
+		\caption{Average Loss}
+	\end{subfigure}%
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/bot-dqn-reward}
+		\caption{Average Reward}
+	\end{subfigure}
+	\caption{Training Result of Acrobot using DQN}\label{fig:bot-dqn}
+\end{figure}
+
+\section*{实验四.}
+
+\subsection*{CartPole}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccc}
+		\toprule
+		超参数 & 参数意义 & 参数值 \\
+		\midrule
+		memory\_size & Replay Memory的大小 & 5000 \\
+		batch\_size & mini-batch的大小 & 128 \\
+		hidden\_dim & DQN的隐层维度 & 50 \\
+		target\_c & $\hat{Q}$的更新频率 & 10 \\
+		discount & DQN算法中的$\gamma$ & 0.99 \\
+		learning\_rate & DQN算法中的$\alpha$ & 0.001 \\
+		eps\_start & $\epsilon$的初始值 & 0.9 \\
+		eps\_end & $\epsilon$的结束值 & 0.05 \\
+		eps\_decay & $\epsilon$的衰减权重 & 200 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Improved DQN超参数设置(CartPole)}\label{tab:pole-idqn}
+\end{table}
+
+Improved DQN在CartPole上的实验结果如图\ref{fig:pole-idqn}所示。
+
+\begin{figure}[htbp]
+	\centering
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/pole-idqn-loss}
+		\caption{Average Loss}
+	\end{subfigure}%
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/pole-idqn-reward}
+		\caption{Average Reward}
+	\end{subfigure}
+	\caption{Training Result of CartPole using Improved DQN}\label{fig:pole-idqn}
+\end{figure}
 
 
+\subsection*{MountainCar}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccc}
+		\toprule
+		超参数 & 参数意义 & 参数值 \\
+		\midrule
+		memory\_size & Replay Memory的大小 & 5000 \\
+		batch\_size & mini-batch的大小 & 128 \\
+		hidden\_dim & DQN的隐层维度 & 50 \\
+		target\_c & $\hat{Q}$的更新频率 & 10 \\
+		discount & DQN算法中的$\gamma$ & 0.99 \\
+		learning\_rate & DQN算法中的$\alpha$ & 0.001 \\
+		eps\_start & $\epsilon$的初始值 & 0.9 \\
+		eps\_end & $\epsilon$的结束值 & 0.05 \\
+		eps\_decay & $\epsilon$的衰减权重 & 50 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Improved DQN超参数设置(MountainCar)}\label{tab:car-idqn}
+\end{table}
+
+Improved DQN在MountainCar上的实验结果如图\ref{fig:car-idqn}所示。
+
+\begin{figure}[htbp]
+	\centering
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/car-idqn-loss}
+		\caption{Average Loss}
+	\end{subfigure}%
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/car-idqn-reward}
+		\caption{Average Reward}
+	\end{subfigure}
+	\caption{Training Result of MountainCar using Improved DQN}\label{fig:car-idqn}
+\end{figure}
+
+\subsection*{Acrobot}
+
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccc}
+		\toprule
+		超参数 & 参数意义 & 参数值 \\
+		\midrule
+		memory\_size & Replay Memory的大小 & 10000 \\
+		batch\_size & mini-batch的大小 & 128 \\
+		hidden\_dim & DQN的隐层维度 & 50 \\
+		target\_c & $\hat{Q}$的更新频率 & 5 \\
+		discount & DQN算法中的$\gamma$ & 0.99 \\
+		learning\_rate & DQN算法中的$\alpha$ & 0.001 \\
+		eps\_start & $\epsilon$的初始值 & 0.9 \\
+		eps\_end & $\epsilon$的结束值 & 0.05 \\
+		eps\_decay & $\epsilon$的衰减权重 & 200 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Improved DQN超参数设置(Acrobot)}\label{tab:bot-idqn}
+\end{table}
+
+Improved DQN在Acrobot上的实验结果如图\ref{fig:bot-idqn}所示。
+
+\begin{figure}[htbp]
+	\centering
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/bot-idqn-loss}
+		\caption{Average Loss}
+	\end{subfigure}%
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[scale=0.35]{figures/bot-idqn-reward}
+		\caption{Average Reward}
+	\end{subfigure}
+	\caption{Training Result of Acrobot using Improved DQN}\label{fig:bot-idqn}
+\end{figure}
 
 \end{document}

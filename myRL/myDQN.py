@@ -153,15 +153,18 @@ class DQNHelper(object):
             self.episodes_done += 1
 
     def play(self):
+        total_reward = 0.0
         state = torch.FloatTensor(self.env.reset())
         for t in range(self.max_step):
             action = self.agent.act(state)
             state, reward, done, _ = self.env.step(action)
+            total_reward += reward
             if not done:
                 state = torch.FloatTensor(state)
             else:
                 print("Play finished after {} steps".format(t + 1))
                 break
+        return total_reward
 
     def eps(self, step):
         return self.eps_end + (self.eps_start - self.eps_end) * math.exp(-step / self.eps_decay)
@@ -262,9 +265,12 @@ class Acrobot(DQNHelper):
 
 if __name__ == '__main__':
     utils.register_env()
-    # pole = CartPole()
+    pole = CartPole()
+    pole.agent.model.load_state_dict(torch.load('model/pole-dqn-10.pkl'))
     # pole.train(200)
-    # car = MountainCar()
+    car = MountainCar()
+    car.agent.model.load_state_dict(torch.load('model/car-dqn-1.pkl'))
     # car.train(10)
     bot = Acrobot()
-    bot.train(10)
+    bot.agent.model.load_state_dict(torch.load('model/bot-dqn-5.pkl'))
+    # bot.train(10)

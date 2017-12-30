@@ -62,15 +62,18 @@ class QHelper(object):
             self.episodes_done += 1
 
     def play(self):
+        total_reward = 0.0
         state = self.agent.discretize(self.env.reset())
         for t in range(self.max_step):
             action = self.agent.act(state)
             state, reward, done, _ = self.env.step(action)
+            total_reward += reward
             if not done:
                 state = self.agent.discretize(state)
             else:
                 print("Play finished after {} steps".format(t + 1))
                 break
+        return total_reward
 
     def eps(self, step):
         return self.eps_end + (self.eps_start - self.eps_end) * math.exp(-step / self.eps_decay)
