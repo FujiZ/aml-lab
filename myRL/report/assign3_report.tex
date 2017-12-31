@@ -28,19 +28,117 @@
 %--
 \begin{document}
 \title{实验3. 强化学习实践}
-\author{MG1733098， 周华平， \url{zhp@smail.nju.edu.cn}}
+\author{MG1733098，周华平，\url{zhp@smail.nju.edu.cn}}
 \maketitle
 
 \section*{综述}
 
 
-
 \section*{实验二.}
 
-% TODO 状态空间离散化方法
-% TODO 算法实现思路
-% TODO 超参数设置
+\subsection*{Q-learning实现}
+
+Q-learning算法采用了$\epsilon$-贪心法，基于一个概率来对探索和利用进行折中。
+若尝试次数非常大，那么在一段时间后，Action的Reward都能很好地近似出来，不需要再探索。
+因此，对于Q-learning以及之后的DQN，假设当前尝试次数为$t$，
+我们使用公式(\ref{eq:eps})来对$\epsilon$进行更新。
+
+\begin{equation}
+	\label{eq:eps}
+	\epsilon = eps\_end+(eps\_start-eps\_end)*\exp(-t/eps\_decay)
+\end{equation}
+
+基于同样的理由，对于learning rate $\alpha$，我们可以采用类似的公式(\ref{eq:alpha})进行更新。
+
+\begin{equation}
+	\label{eq:alpha}
+	\alpha = lr\_end+(lr\_start-lr\_end)*\exp(-t/lr\_decay)
+\end{equation}
+
+在Python中实现Q-learning算法主要利用了numpy提供的一些函数。
+我们将Q值函数用Python的dict来表示，
+用\lstinline[language=Python]{defaultdict(lambda: np.zeros(action_space.n))}
+来对Q table进行初始化。
+Q table的key是经过离散化后的状态，value是所有Action对应的Q值构成的ndarray。
+这里的defaultdict是Python提供的collections容器，
+作用是在调用get时对value进行初始化操作。
+我们通过一个lambda表达式将qtable中的所有Q值都初始化为0。
+算法其他部分的实现比较直观，基本和伪代码中的结构一一对应，因此这里不过多赘述，
+具体实现详见myQLearning.py。
+
+需要特别指出的是，为了加快训练算法的收敛速度，
+我对每个任务的Reward进行了简单的重新定义。
+具体来说，对于CartPole，当轨迹在某一步提前结束时，该步的Reward为$-100$；
+而对于MountainCar和Acrobot，当轨迹在某一步提前结束时，该步的Reward为$100$。
+这里的定义利用了一个非常直接的观察：
+CartPole需要坚持的越久越好，而MountainCar和Acrobot则越快完成越好。
+除此之外，我并没有对状态参数进行额外的分析，从而“凑出”一个更好的Reward，
+即使这样得到的训练效果可能会更好。
+我认为对于状态参数的分析并不应该由人来完成，
+如果Reward被人工定义为关于状态参数的一个复杂函数，
+则这个函数包含了我们对于这个任务的一些先验知识，
+而这些本应该由算法在训练过程中慢慢学习。
+如果利用了这些复杂的先验知识的话，我感觉和在游戏中开外挂没什么区别。
+
+\subsection*{Q-learning训练}
+
+对于Q-learning中的几个任务，
+我们统一采用\lstinline[language=Python]{np.linspace()}来对状态空间进行离散化，
+具体参数如表\ref{tab:disc-ql}所示。
+
+\begin{table}[H]
+	\centering
+	\caption{Q-learning离散化参数}\label{tab:disc-ql}
+	\begin{tabular}{c|ccc}
+		\toprule
+		& CartPole & MountainCar & Acrobot \\
+		\midrule
+		start & $(-2.4, -1.1, -12^\circ, -1.5)$ & $(-1.2, -0.07)$ & $(-1, -1, -1, -1, -4\pi, -9\pi)$ \\
+		stop & $(2.4, 1.1, 12^\circ, -1.5)$ & $(0.6, 0.07)$ & $(1, 1, 1, 1, 4\pi, 9\pi)$ \\
+		num & $(5, 5, 9, 5)$ & $(20, 20)$ & $(10, 10, 10, 10, 10, 10)$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Q-learning的超参数设置如表\ref{tab:arg-ql}所示。
+
+\begin{table}[H]
+	\centering
+	\caption{Q-learning超参数设置}\label{tab:arg-ql}
+	\begin{tabular}{ccccc}
+		\toprule
+		超参数 & 参数意义 & CartPole & MountainCar & Acrobot \\
+		\midrule
+		discount & Q-learning算法中的$\gamma$ & 0.99 & 0.99 & 0.9 \\
+		lr\_start & $\alpha$的初始值 & 0.9 & 0.9 & 0.9 \\
+		lr\_end & $\alpha$的结束值 & 0.001 & 0.0015 & 0.0015 \\
+		lr\_decay & $\alpha$的衰减权重 & 1000 & 200 & 200 \\
+		eps\_start & $\epsilon$的初始值 & 0.9 & 0.9 & 0.9 \\
+		eps\_end & $\epsilon$的结束值 & 0.05 & 0.05 & 0.05\\
+		eps\_decay & $\epsilon$的衰减权重 & 1000 & 200 & 200 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
 % TODO reward的均值和标准差
+对于每个任务，我将多次训练中得到的最好的策略进行测试。
+对于CartPole、MountainCar以及Acrobot，我分别测试了100条轨迹，
+最终得到reward的均值和标准差如表\ref{tab:reward-ql}所示。
+
+\begin{table}[H]
+	\centering
+	\caption{Q-learning Average Reward}\label{tab:reward-ql}
+	\begin{tabular}{c|ccc}
+		\toprule
+		& CartPole & MountainCar & Acrobot \\
+		\midrule
+		$mean \pm std$ &
+		$385.29 \pm 69.15$ &
+		$-141.68 \pm 22.79$ &
+		$-170.70 \pm 37.79$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
 
 \section*{实验三.}
 
@@ -53,8 +151,9 @@ DQN在基本的Deep Q-Learning算法的基础上使用了Experience Replay经验
 在定义Q值网络时我使用了MLP，其中网络结构由3层Linear构成；激活函数使用PReLU，
 同时在每个隐层中增加Batch Norm来对相应的activation做规范化操作。
 DQN中的神经网络和梯度计算的实现主要利用了PyTorch提供的Optimizer以及loss函数。
-具体来说，在DQN中我采用\lstinline[language=Python]{optim.Adam}作为优化函数，
+具体说来，在DQN中我采用\lstinline[language=Python]{optim.Adam}作为优化函数，
 用\lstinline[language=Python]{nn.MSELoss()}来计算均方误差。
+$\epsilon$的更新同公式(\ref{eq:eps})。
 其余的算法实现细节详见myDQN.py。
 
 Q值网络的定义如下所示：
@@ -84,8 +183,6 @@ class DQN(nn.Module):
 \subsection*{DQN训练}
 
 DQN的超参数设置如表\ref{tab:arg-dqn}所示。
-% TODO 公式ref
-其中$\epsilon$的衰减公式同公式(abcd)。
 
 \begin{table}[H]
 	\centering
@@ -176,7 +273,7 @@ DQN在Acrobot上的实验结果如图\ref{fig:bot-dqn}所示。
 
 \begin{table}[H]
 	\centering
-	\caption{DQN Reward结果}\label{tab:reward-dqn}
+	\caption{DQN Average Reward}\label{tab:reward-dqn}
 	\begin{tabular}{c|ccc}
 		\toprule
 		& CartPole & MountainCar & Acrobot \\
@@ -200,7 +297,7 @@ DQN在Acrobot上的实验结果如图\ref{fig:bot-dqn}所示。
 在每训练了$C$步之后，Improved DQN将当前$Q$的参数值复制给$\hat{Q}$。
 
 Improved DQN的实现基于DQN，因此代码部分的改动比较少。
-另外在Improved DQN中需要新增一个超参数target\_c，用于表示$\hat{Q}$的更新频率。
+另外在Improved DQN中需要新增一个超参数target\_c，用以表示$\hat{Q}$的更新频率。
 
 \subsection*{Improved DQN训练}
 
@@ -288,7 +385,7 @@ Improved DQN在Acrobot上的实验结果如图\ref{fig:bot-idqn}所示。
 
 \begin{table}[H]
 	\centering
-	\caption{Improved DQN Reward结果}\label{tab:reward-idqn}
+	\caption{Improved DQN Average Reward}\label{tab:reward-idqn}
 	\begin{tabular}{c|ccc}
 		\toprule
 		& CartPole & MountainCar & Acrobot \\
@@ -316,6 +413,6 @@ DQN和Improved DQN在CartPole和Acrobot上的训练效果比较接近。
 其中最好的那个模型的效果应该和Improved DQN上得到的结果相近。
 
 所以我认为Improved DQN在训练阶段比DQN表现得更加稳定，收敛速度也更快；
-而在训练模型收敛后，DQN与Improved DQN的训练效果应该是比较接近的。
+而在训练模型收敛后，我猜测DQN与Improved DQN的训练效果应该会比较接近。
 
 \end{document}
