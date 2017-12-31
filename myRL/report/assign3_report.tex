@@ -21,6 +21,7 @@
 \usepackage{listings}
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Procedure:}}
+\bibliographystyle{plain}
 \renewcommand\refname{参考文献}
 
 %--
@@ -33,12 +34,21 @@
 
 \section*{综述}
 
+与传统的监督、无监督学习不同，强化学习的过程需要与学习环境进行交互，
+利用环境反馈信息进行学习。
+在本次实验中，我们从学习环境的安装、常用强化学习算法的实现和
+强化学习算法改进这些方面完整的体会了一次强化学习研究的过程。
+具体说来，本次实验我使用Python语言分别实现了Q-learning、
+DQN以及Improved DQN这三个强化学习算法，
+并在Gym实验环境下对CartPole、MountainCar以及Acrobot进行了训练。
+其中Q-learning利用numpy实现；
+而DQN和Improved DQN则通过PyTorch搭建神经网络来实现。
 
 \section*{实验二.}
 
 \subsection*{Q-learning实现}
 
-Q-learning算法采用了$\epsilon$-贪心法，基于一个概率来对探索和利用进行折中。
+Q-learning算法中使用了$\epsilon$-贪心法，基于一个概率来对探索和利用进行折中。
 若尝试次数非常大，那么在一段时间后，Action的Reward都能很好地近似出来，不需要再探索。
 因此，对于Q-learning以及之后的DQN，假设当前尝试次数为$t$，
 我们使用公式(\ref{eq:eps})来对$\epsilon$进行更新。
@@ -48,7 +58,7 @@ Q-learning算法采用了$\epsilon$-贪心法，基于一个概率来对探索�
 	\epsilon = eps\_end+(eps\_start-eps\_end)*\exp(-t/eps\_decay)
 \end{equation}
 
-基于同样的理由，对于learning rate $\alpha$，我们可以采用类似的公式(\ref{eq:alpha})进行更新。
+基于类似的理由，对于learning rate $\alpha$，我们可以采用公式(\ref{eq:alpha})进行更新。
 
 \begin{equation}
 	\label{eq:alpha}
@@ -414,5 +424,8 @@ DQN和Improved DQN在CartPole和Acrobot上的训练效果比较接近。
 
 所以我认为Improved DQN在训练阶段比DQN表现得更加稳定，收敛速度也更快；
 而在训练模型收敛后，我猜测DQN与Improved DQN的训练效果应该会比较接近。
+
+\nocite{*}
+\bibliography{assign3_report}
 
 \end{document}
