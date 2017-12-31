@@ -37,17 +37,25 @@
 
 \section*{实验二.}
 
-
+% TODO 状态空间离散化方法
+% TODO 算法实现思路
+% TODO 超参数设置
+% TODO reward的均值和标准差
 
 \section*{实验三.}
 
 \subsection*{DQN实现}
 
+DQN在基本的Deep Q-Learning算法的基础上使用了Experience Replay经验池，
+通过将训练得到的数据储存起来然后随机采样的方法来降低数据样本的相关性，进而提升了性能。
+
 在本实验中，我选择使用PyTorch来实现DQN。
 在定义Q值网络时我使用了MLP，其中网络结构由3层Linear构成；激活函数使用PReLU，
 同时在每个隐层中增加Batch Norm来对相应的activation做规范化操作。
-另外，在DQN中我采用\lstinline[language=Python]{optim.Adam}作为优化函数，
+DQN中的神经网络和梯度计算的实现主要利用了PyTorch提供的Optimizer以及loss函数。
+具体来说，在DQN中我采用\lstinline[language=Python]{optim.Adam}作为优化函数，
 用\lstinline[language=Python]{nn.MSELoss()}来计算均方误差。
+其余的算法实现细节详见myDQN.py。
 
 Q值网络的定义如下所示：
 
@@ -72,9 +80,6 @@ class DQN(nn.Module):
         x = self.layer2(x)
         return self.out(x)
 \end{lstlisting}
-
-% TODO 算法实现细节
-DQN在基本的Deep Q-Learning算法的基础上使用了Experience Replay经验池。通过将训练得到的数据储存起来然后随机采样的方法降低了数据样本的相关性。提升了性能。
 
 \subsection*{DQN训练}
 
