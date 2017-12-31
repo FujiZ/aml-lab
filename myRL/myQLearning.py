@@ -96,15 +96,15 @@ class CartPole(QHelper):
             max_step=20000,
             eps_start=0.9,
             eps_end=0.05,
-            eps_decay=200,
+            eps_decay=1000,
             lr_start=0.9,
-            lr_end=0.0015,
-            lr_decay=200,
+            lr_end=0.001,
+            lr_decay=1000,
         )
 
-        bin_size = (2, 2, 7, 7)
-        min_value = (-2.4, -1.1, math.radians(-41.8), -0.9)
-        max_value = (2.4, 1.1, math.radians(41.8), 0.9)
+        bin_size = (5, 5, 9, 5)
+        min_value = (-2.4, -1.1, math.radians(-12.0), -1.5)
+        max_value = (2.4, 1.1, math.radians(12.0), 1.5)
 
         self.n_state = env.observation_space.shape[0]
         self.bin = [np.linspace(min_value[i], max_value[i], bin_size[i]) for i in range(self.n_state)]
@@ -199,7 +199,7 @@ class Acrobot(QHelper):
 if __name__ == '__main__':
     utils.register_env()
     pole = CartPole()
-    pole.train(10000)
+    pole.train(5000)
     # car = MountainCar()
     # car.train(2000)
     # acrobot = Acrobot()
