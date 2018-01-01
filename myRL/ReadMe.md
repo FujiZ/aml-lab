@@ -26,6 +26,6 @@ Helper class被命名为CartPole、MountainCar以及Acrobot，
 > Underscores can be used in the module name if it improves readability.
 > Python packages should also have short, all-lowercase names, although the use of underscores is discouraged.
 
-因此在实验说明中类似MyDQN.py这样的命名是不符合规范的，
-希望在以后布置作业的时候能注意一下代码规范的问题。
+因此在实验说明中类似MyDQN.py这样的命名实际上是不符合规范的，
+希望在以后布置作业的时候能稍微注意一下代码规范的问题。
 
