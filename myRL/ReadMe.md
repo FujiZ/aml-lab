@@ -7,11 +7,15 @@
 
 ```Python
 import myQLearning
+import utils
 
+utils.register_env()
 pole = myQLearning.CartPole()
 pole.train(5000)
 pole.play()
 ```
+
+其中`utils.register_env()`用于注册修改过轨迹长度的环境。
 
 Helper class被命名为CartPole、MountainCar以及Acrobot，
 分别对应gym中的三个实验环境。
